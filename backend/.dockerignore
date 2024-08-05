@@ -1,0 +1,9 @@
+venv
+.venv
+.git
+db.sqlite3 
+.vscode
+.env
+.gitignore
+.mypy_cache
+__pycache__
