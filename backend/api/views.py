@@ -4,19 +4,32 @@ from rest_framework.permissions import (AllowAny,  # type: ignore
                                         IsAuthenticated)
 from rest_framework import viewsets  # type: ignore
 
-from recipes.models import Tag, Recipe
-from .serializers import TagSerializer, RecipeSerializer
+from recipes.models import Tag, Recipe, Ingredient
+from .serializers import (TagSerializer, RecipeWriteSerializer,
+                          RecipeReadSerializer, IngredientSerializer)
 from .permissions import AuthorOnly, ForbiddenPermission
 
 
-class TagViewSet(viewsets.ModelViewSet):
+class BaseReadOnlyViewset(viewsets.ReadOnlyModelViewSet):
+    """Базовый вьюсет для чтения."""
+
+    permission_classes = (AllowAny,)
+    pagination_class = None
+
+
+class TagViewSet(BaseReadOnlyViewset):
     """Вьюсет тегов."""
 
-    http_method_names = ('get',)
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    pagination_class = None
-    permission_classes = (AllowAny,)
+
+
+class IngredientViewSet(BaseReadOnlyViewset):
+    """Вьюсет ингредиентов."""
+
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+    search_fields = ('^name',)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -24,7 +37,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     http_method_names = ('get', 'post', 'patch', 'delete')
     queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
 
     def get_permissions(self):
         """Разрешения."""
@@ -37,3 +49,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         else:
             self.permission_classes = (ForbiddenPermission,)
         return super().get_permissions()
+
+    def get_serializer_class(self):
+        """Выбор сериализатора."""
+        if self.action in {'list', 'retrieve'}:
+            return RecipeReadSerializer
+        return RecipeWriteSerializer

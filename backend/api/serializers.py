@@ -115,4 +115,13 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                   'text',
                   'cooking_time',
                   )
-        
+
+
+class IngredientSerializer(serializers.ModelSerializer):
+    """Сериализатор ингредиентов."""
+
+    class Meta:
+        model = Ingredient
+        fields = ('id',
+                  'name',
+                  'measurement_unit')

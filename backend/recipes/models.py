@@ -49,7 +49,7 @@ class BaseNameModel(models.Model):
 class Ingredient(BaseNameModel):
     """Модель ингредиента."""
 
-    units = models.CharField(max_length=MAX_UNIT_LENGTH,
+    measurement_unit = models.CharField(max_length=MAX_UNIT_LENGTH,
                              validators=(MaxLengthValidator,),
                              verbose_name='Единицы измерения')
 
