@@ -1,16 +1,33 @@
 """Модели."""
 
+import re
+
 from django.db import models  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
 from django.core.validators import (MaxValueValidator,  # type: ignore
                                     MaxLengthValidator,
                                     MinValueValidator)
+from django.core.exceptions import ValidationError  # type: ignore
 
 from .constants import (MAX_NAME_LENGTH, MAX_SLUG_LENGTH, MAX_UNIT_LENGTH,
                         MAX_INGREDIENT_AMOUNT, MIN_INGREDIENT_AMOUNT,
                         MAX_COOKING_TIME, MIN_COOKING_TIME)
 
 User = get_user_model()
+
+
+def validate_slug(slug):
+    """Проверка слага."""
+    if len(slug) > MAX_SLUG_LENGTH:
+        raise ValidationError(
+            f'Длина слага не должна превышать '
+            f'{MAX_SLUG_LENGTH} символов.'
+        )
+    if not re.fullmatch(r'^[-a-zA-Z0-9_]+$', slug):
+        raise ValidationError(
+            'Слаг содержит недопустимые символы.'
+        )
+    return slug
 
 
 class BaseNameModel(models.Model):
@@ -41,7 +58,8 @@ class Tag(BaseNameModel):
     """Модель тега."""
 
     slug = models.SlugField(unique=True, max_length=MAX_SLUG_LENGTH,
-                            validators=(MaxLengthValidator,),
+                            validators=(MaxLengthValidator,
+                                        validate_slug),
                             verbose_name='Слаг',
                             unique=True)
 
@@ -56,7 +74,7 @@ class Recipe(BaseNameModel):
         upload_to='recipes/images/',
     )
     text = models.TextField(verbose_name='Текст рецепта')
-    ingredients = models.ManyToManyField(Ingredient,
+    ingredients = models.ManyToManyField(Ingredient, null=True,
                                          through='RecipeIngredient',
                                          verbose_name='Ингредиенты')
     tags = models.ManyToManyField(Tag, related_name='recipes',
@@ -67,6 +85,12 @@ class Recipe(BaseNameModel):
                     MinValueValidator(MIN_COOKING_TIME)),
         verbose_name='Время приготовления в минутах',
     )
+    pub_date = models.DateTimeField(verbose_name='Дата публикации',
+                                    auto_now_add=True,
+                                    db_index=True)
+
+    class Meta:
+        ordering = ('-pub_date',)
 
 
 class RecipeIngredient(models.Model):
