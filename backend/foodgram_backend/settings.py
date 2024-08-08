@@ -21,8 +21,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework.authtoken',
     'rest_framework',
+    'rest_framework.authtoken',
     'djoser',
     'users.apps.UsersConfig',
     'api.apps.ApiConfig',
@@ -132,3 +132,10 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 6,
 
 }
+
+DJOSER = {
+    'PASSWORD_RESET_CONFIRM_URL': '#/password/reset/confirm/{uid}/{token}',
+    'LOGIN_FIELD': 'User.email',
+}
+
+AUTH_USER_MODEL = 'users.UserWithSubscriptions'

@@ -19,8 +19,8 @@ router_v1.register('titles', TitleViewSet, basename='titles')
 
 v1_patterns: list[path] = [
     path('', include(router_v1.urls)),
-    path('', include('djoser.urls')),
-    path('', include('djoser.urls.authtoken')),
+    path(r'^auth/', include('djoser.urls')),
+    path(r'^auth/', include('djoser.urls.authtoken')),
 ]
 
 urlpatterns: list[path] = [
