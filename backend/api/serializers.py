@@ -5,8 +5,11 @@ import base64
 from rest_framework import serializers  # type: ignore
 from django.core.files.base import ContentFile  # type: ignore
 from django.core.exceptions import ValidationError  # type: ignore
+from django.contrib.auth import get_user_model  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient, RecipeIngredient
+
+User = get_user_model()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -125,3 +128,68 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = ('id',
                   'name',
                   'measurement_unit')
+
+
+class UserReadSerializer(serializers.ModelSerializer):
+    """Сериализатор пользователя."""
+
+    is_subscribed = serializers.SerializerMethodField()
+    avatar = Base64ImageField()
+
+    class Meta:
+        model = User
+        fields = ('email',
+                  'id',
+                  'username',
+                  'first_name',
+                  'last_name',
+                  'is_subscribed',
+                  'avatar')
+
+    def get_is_subscribed(self):
+        request = self.context.get('request')
+        if not request:
+            raise ValidationError('Нет данных запроса.')
+        user = request.user
+        if user.is_authenticated:
+            username = self.instance.username
+            return user.subscriptions.filter(username=username).exists()
+        return False
+
+
+class UserWriteSerializer(serializers.ModelSerializer):
+    """Сериализатор пользователя."""
+
+    class Meta:
+        model = User
+        fields = ('email',
+                  'username',
+                  'first_name',
+                  'last_name',
+                  'password')
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = User.objects.create(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class PasswordSerializer(serializers.Serializer):
+    """Сериализатор пароля."""
+
+    new_password = serializers.CharField()
+    current_password = serializers.CharField()
+
+    def validate(self, attrs):
+        user = self.context.get('request').user
+        if not user.check_password(attrs['current_password']):
+            raise ValidationError('Неверный пароль.')
+        return attrs
+
+    def save(self):
+        user = self.context.get('request').user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
