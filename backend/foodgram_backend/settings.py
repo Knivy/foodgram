@@ -138,7 +138,7 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'PASSWORD_RESET_CONFIRM_URL': '#/password/reset/confirm/{uid}/{token}',
-    'LOGIN_FIELD': 'User.email',
+    'LOGIN_FIELD': 'email',
 }
 
 AUTH_USER_MODEL = 'users.UserWithSubscriptions'

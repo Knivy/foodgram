@@ -7,6 +7,7 @@ from django.core.validators import MaxLengthValidator  # type:ignore
 from .validators import (validate_username, validate_email,
                          MaxLengthPasswordValidator)
 from .constants import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, MAX_PASSWORD_LENGTH
+from recipes.models import Recipe
 
 
 class Role(models.TextChoices):
@@ -72,6 +73,12 @@ class UserWithSubscriptions(AbstractUser):
         max_length=get_role_max_length(),
         validators=(MaxLengthValidator,),
         default=Role.USER,
+    )
+    favorites = models.ManyToManyField(
+        Recipe,
+        related_name='favourites',
+        verbose_name='Избранное',
+        blank=True,
     )
 
     class Meta:

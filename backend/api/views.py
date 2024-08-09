@@ -11,7 +11,7 @@ from recipes.models import Tag, Recipe, Ingredient
 from .serializers import (TagSerializer, RecipeWriteSerializer,
                           RecipeReadSerializer, IngredientSerializer,
                           UserReadSerializer, UserWriteSerializer,
-                          PasswordSerializer)
+                          PasswordSerializer, FavoriteSerializer)
 from .permissions import AuthorOnly, ForbiddenPermission
 
 
@@ -62,10 +62,36 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Выбор сериализатора."""
         if self.action in {'list', 'retrieve'}:
             return RecipeReadSerializer
+        if self.action == 'favorite':
+            return FavoriteSerializer
         return RecipeWriteSerializer
+
+    @action(
+        detail=True,
+        methods=('post',),
+        permission_classes=(IsAuthenticated,)
+    )
+    def favorite(self, request):
+        """Добавление в избранное."""
+        serializer = self.get_serializer()
+        serializer.save()
+        return Response(serializer.data)
+
+    @favorite.mapping.delete
+    def delete_favorite(self, request):
+        """Удалить из избранного."""
+        user = request.user
+        favorite_recipes = user.favorites.filter(recipe=self.get_object())
+        if favorite_recipes.exists():
+            for recipe in favorite_recipes:
+                recipe.delete()
+            return Response(status=204)
+        return Response(status=404)
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """Вьюсет пользователей."""
+
     http_method_names = ('get', 'post')
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
@@ -76,6 +102,7 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def me(self, request):
+        """Страница пользователя."""
         user = request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data)
@@ -86,6 +113,7 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def set_password(self, request):
+        """Установка пароля."""
         user = request.user
         serializer = self.get_serializer(user, data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -93,6 +121,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def get_serializer_class(self):
+        """Выбор сериализатора."""
         if self.action in {'me', 'list', 'retrieve'}:
             return UserReadSerializer
         if self.action == 'set_password':

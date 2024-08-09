@@ -23,7 +23,10 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class Base64ImageField(serializers.ImageField):
+    """Поле для картинки."""
+
     def to_internal_value(self, data):
+        """Преобразование в картинку."""
         if isinstance(data, str) and data.startswith('data:image'):
             format, imgstr = data.split(';base64,')
             ext = format.split('/')[-1]
@@ -39,6 +42,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
 
     class Meta:
+        """Настройки сериализатора."""
+    
         model = Recipe
         fields = ('ingredients',
                   'tags',
@@ -63,6 +68,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
+        """Обновление рецепта."""
         instance.name = validated_data.get('name', instance.name)
         instance.image = validated_data.get('image', instance.image)
         instance.cooking_time = validated_data.get(
@@ -106,6 +112,8 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
 
     class Meta:
+        """Настройки сериализатора."""
+   
         model = Recipe
         fields = ('id',
                   'tags',
@@ -124,6 +132,8 @@ class IngredientSerializer(serializers.ModelSerializer):
     """Сериализатор ингредиентов."""
 
     class Meta:
+        """Настройки сериализатора."""
+
         model = Ingredient
         fields = ('id',
                   'name',
@@ -137,6 +147,8 @@ class UserReadSerializer(serializers.ModelSerializer):
     avatar = Base64ImageField()
 
     class Meta:
+        """Настройки сериализатора."""
+  
         model = User
         fields = ('email',
                   'id',
@@ -146,7 +158,8 @@ class UserReadSerializer(serializers.ModelSerializer):
                   'is_subscribed',
                   'avatar')
 
-    def get_is_subscribed(self):
+    def get_is_subscribed(self, data):
+        """Поле, подписан ли текущий пользователь на этого пользователя."""
         request = self.context.get('request')
         if not request:
             raise ValidationError('Нет данных запроса.')
@@ -170,6 +183,7 @@ class UserWriteSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
+        """Создание пользователя."""
         password = validated_data.pop('password')
         user = User.objects.create(**validated_data)
         user.set_password(password)
@@ -184,12 +198,40 @@ class PasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField()
 
     def validate(self, attrs):
+        """Валидация пароля."""
         user = self.context.get('request').user
         if not user.check_password(attrs['current_password']):
             raise ValidationError('Неверный пароль.')
         return attrs
 
     def save(self):
+        """Смена пароля."""
         user = self.context.get('request').user
         user.set_password(self.validated_data['new_password'])
         user.save()
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    """Сериализатор для избранного."""
+
+    image = Base64ImageField()
+
+    class Meta:
+        """Настройки сериализатора."""
+
+        model = Recipe
+        fields = ('id',
+                  'name',
+                  'image',
+                  'cooking_time')
+        read_only_fields = ('name',
+                            'image',
+                            'cooking_time')
+
+    def save(self):
+        """Добавление в избранное."""
+        user = self.context.get('request').user
+        recipe = self.instance
+        if not user.favorites.filter(recipe=recipe).exists():
+            user.favorites.create(recipe=recipe)
+        return recipe
