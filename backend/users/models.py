@@ -13,7 +13,6 @@ class Role(models.TextChoices):
     """Роли пользователя."""
 
     USER = 'user', 'Пользователь'
-    MODERATOR = 'moderator', 'Модератор'
     ADMIN = 'admin', 'Администратор'
 
 
@@ -53,6 +52,7 @@ class UserWithSubscriptions(AbstractUser):
         max_length=MAX_PASSWORD_LENGTH,
         validators=(MaxLengthValidator,
                     MaxLengthPasswordValidator),
+        verbose_name='Пароль',
     )
     subscriptions = models.ManyToManyField(
         'self',

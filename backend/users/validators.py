@@ -18,7 +18,7 @@ def validate_username(username):
             f'Длина логина не должна превышать '
             f'{NAME_MAX_LENGTH} символов.'
         )
-    if not re.fullmatch(r'^[\w.@+-]+\z', username):
+    if not re.fullmatch(r'^[\w.@+-]+$', username):
         raise ValidationError(
             'Логин содержит недопустимые символы.'
         )
