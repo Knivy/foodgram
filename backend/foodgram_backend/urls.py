@@ -6,8 +6,8 @@ from django.conf import settings  # type: ignore
 from django.conf.urls.static import static  # type: ignore
 
 urlpatterns: list[path] = [
-    path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
+    path('admin/', admin.site.urls),
 ]
 
 if settings.DEBUG:
