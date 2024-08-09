@@ -39,10 +39,13 @@ class BaseNameModel(models.Model):
                             unique=True)
 
     class Meta:
+        """Настройки."""
+
         abstract = True
         ordering = ('name',)
 
     def __str__(self):
+        """Строковое представление."""
         return self.name
 
 
@@ -50,8 +53,8 @@ class Ingredient(BaseNameModel):
     """Модель ингредиента."""
 
     measurement_unit = models.CharField(max_length=MAX_UNIT_LENGTH,
-                             validators=(MaxLengthValidator,),
-                             verbose_name='Единицы измерения')
+                                        validators=(MaxLengthValidator,),
+                                        verbose_name='Единицы измерения')
 
 
 class Tag(BaseNameModel):
@@ -60,8 +63,7 @@ class Tag(BaseNameModel):
     slug = models.SlugField(unique=True, max_length=MAX_SLUG_LENGTH,
                             validators=(MaxLengthValidator,
                                         validate_slug),
-                            verbose_name='Слаг',
-                            unique=True)
+                            verbose_name='Слаг')
 
 
 class Recipe(BaseNameModel):
@@ -74,7 +76,7 @@ class Recipe(BaseNameModel):
         upload_to='recipes/images/',
     )
     text = models.TextField(verbose_name='Текст рецепта')
-    ingredients = models.ManyToManyField(Ingredient, null=True,
+    ingredients = models.ManyToManyField(Ingredient,
                                          through='RecipeIngredient',
                                          verbose_name='Ингредиенты')
     tags = models.ManyToManyField(Tag, related_name='recipes',
@@ -90,6 +92,8 @@ class Recipe(BaseNameModel):
                                     db_index=True)
 
     class Meta:
+        """Настройки."""
+
         ordering = ('-pub_date',)
 
 
@@ -97,7 +101,7 @@ class RecipeIngredient(models.Model):
     """Промежуточная таблица с указанием количества ингредиентов."""
 
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
-                               related_name='ingredients')
+                               related_name='recipe_ingredients')
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE,
                                    related_name='recipes')
     amount = models.PositiveSmallIntegerField(validators=(
@@ -106,4 +110,5 @@ class RecipeIngredient(models.Model):
         verbose_name='Количество')
 
     def __str__(self):
+        """Строковое представление."""
         return f'{self.ingredient.name}: {self.amount} {self.ingredient.units}'

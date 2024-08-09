@@ -1,14 +1,12 @@
 """Модели пользователей."""
 
-import re  # type:ignore
-
 from django.db import models  # type:ignore
 from django.contrib.auth.models import AbstractUser  # type:ignore
-from django.core.exceptions import ValidationError  # type:ignore
 from django.core.validators import MaxLengthValidator  # type:ignore
-from django.forms import PasswordInput  # type:ignore
 
-from .constants import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH
+from .validators import (validate_username, validate_email,
+                         MaxLengthPasswordValidator)
+from .constants import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, MAX_PASSWORD_LENGTH
 
 
 class Role(models.TextChoices):
@@ -22,33 +20,6 @@ class Role(models.TextChoices):
 def get_role_max_length():
     """Длина поля роли."""
     return max(len(role[0]) for role in Role.choices)
-
-
-def validate_username(username):
-    """Проверка логина."""
-    if username.lower() == 'me':
-        raise ValidationError(
-            'Нельзя назвать логин "me".'
-        )
-    if len(username) > NAME_MAX_LENGTH:
-        raise ValidationError(
-            f'Длина логина не должна превышать '
-            f'{NAME_MAX_LENGTH} символов.'
-        )
-    if not re.fullmatch(r'^[\w.@+-]+\z', username):
-        raise ValidationError(
-            'Логин содержит недопустимые символы.'
-        )
-    return username
-
-
-def validate_email(email):
-    """Проверка email."""
-    if len(email) > EMAIL_MAX_LENGTH:
-        raise ValidationError(
-            'Email слишком длинный.'
-        )
-    return email
 
 
 class UserWithSubscriptions(AbstractUser):
@@ -79,14 +50,15 @@ class UserWithSubscriptions(AbstractUser):
         validators=(MaxLengthValidator,),
     )
     password = models.CharField(
-        widget=PasswordInput()
+        max_length=MAX_PASSWORD_LENGTH,
+        validators=(MaxLengthValidator,
+                    MaxLengthPasswordValidator),
     )
     subscriptions = models.ManyToManyField(
         'self',
         related_name='subscriptions',
         verbose_name='Подписки',
         blank=True,
-        null=True,
     )
     avatar = models.ImageField(
         verbose_name='Аватар',
@@ -103,13 +75,18 @@ class UserWithSubscriptions(AbstractUser):
     )
 
     class Meta:
+        """Настройки."""
+
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
         ordering = ('username',)
 
     def __str__(self):
+        """Строковое представление."""
         return self.username
 
     @property
     def is_superuser_or_admin(self):
+        """Является ли пользователь суперпользователем или администратором."""
+        self.refresh_from_db()
         return self.is_superuser or self.role == Role.ADMIN
