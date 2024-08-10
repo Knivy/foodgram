@@ -11,7 +11,8 @@ from recipes.models import Tag, Recipe, Ingredient
 from .serializers import (TagSerializer, RecipeWriteSerializer,
                           RecipeReadSerializer, IngredientSerializer,
                           UserReadSerializer, UserWriteSerializer,
-                          PasswordSerializer, FavoriteSerializer)
+                          PasswordSerializer, FavoriteSerializer,
+                          SubscriptionSerializer)
 from .permissions import AuthorOnly, ForbiddenPermission
 
 
@@ -126,4 +127,49 @@ class UserViewSet(viewsets.ModelViewSet):
             return UserReadSerializer
         if self.action == 'set_password':
             return PasswordSerializer
+        if self.action == 'subscribe':
+            return SubscriptionSerializer
         return UserWriteSerializer
+    
+    @action(
+        detail=True,
+        methods=('post',),
+        permission_classes=(IsAuthenticated,)
+    )
+    def subscribe(self, request):
+        """Подписка."""
+        user = request.user
+        serializer = self.get_serializer(user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request):
+        """Удалить из подписок."""
+        user = request.user
+        subscriptions = user.subscriptions.filter(id=request.data['id'])
+        if subscriptions.exists():
+            for subscription in subscriptions:
+                subscription.delete()
+            return Response(status=204)
+        return Response(status=404)
+
+
+class SubscriptionViewSet(viewsets.ReadOnlyModelViewSet):
+    """Вьюсет подписок."""
+
+    sserializer_class = SubscriptionSerializer
+
+    def get_permissions(self):
+        """Разрешения."""
+        if self.action == 'list':
+            self.permission_classes = (AllowAny,)
+        else:
+            self.permission_classes = (ForbiddenPermission,)
+        return super().get_permissions()
+
+    def get_queryset(self):
+        """Подписки."""
+        user = self.request.user
+        return user.subscriptions.all()

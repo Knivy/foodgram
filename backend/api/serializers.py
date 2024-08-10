@@ -148,7 +148,7 @@ class UserReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         """Настройки сериализатора."""
-  
+
         model = User
         fields = ('email',
                   'id',
@@ -174,6 +174,8 @@ class UserWriteSerializer(serializers.ModelSerializer):
     """Сериализатор пользователя."""
 
     class Meta:
+        """Настройки сериализатора."""
+
         model = User
         fields = ('email',
                   'username',
@@ -235,3 +237,68 @@ class FavoriteSerializer(serializers.ModelSerializer):
         if not user.favorites.filter(recipe=recipe).exists():
             user.favorites.create(recipe=recipe)
         return recipe
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """Сериализатор подписок."""
+
+    recipes = serializers.SerializerMethodField()
+    is_subscribed = serializers.SerializerMethodField()
+    avatar = Base64ImageField()
+
+    class Meta:
+        """Настройки сериализатора."""
+
+        model = User
+        fields = ('email',
+                  'id',
+                  'username',
+                  'first_name',
+                  'last_name',
+                  'is_subscribed',
+                  'recipes',
+                  'recipes_count',
+                  'avatar')
+        read_only_fields = (
+            'email',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+            'avatar')
+
+    def get_recipes(self, user):
+        """Получение рецептов пользователя."""
+        view = self.context.get('view')
+        if not view:
+            raise serializers.ValidationError('Нет view.')
+        recipes = user.recipes.all()
+        recipes_limit = view.kwargs.get('recipes_limit')
+        if recipes_limit:
+            recipes = recipes[:recipes_limit]
+        return RecipeReadSerializer(recipes, many=True).data
+
+    def get_is_subscribed(self, data):
+        """Поле, подписан ли текущий пользователь на этого пользователя."""
+        request = self.context.get('request')
+        if not request:
+            raise ValidationError('Нет данных запроса.')
+        user = request.user
+        if user.is_authenticated:
+            username = self.instance.username
+            return user.subscriptions.filter(username=username).exists()
+        return False
+
+    def get_recipes_count(self, user):
+        """Получение количества рецептов пользователя."""
+        view = self.context.get('view')
+        if not view:
+            raise serializers.ValidationError('Нет view.')
+        recipes = user.recipes.all()
+        return recipes.count()
+
+    def create(self, validated_data):
+        """Создание подписки."""
+        return User.subscriptions.create(**validated_data)
