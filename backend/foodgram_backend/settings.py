@@ -14,6 +14,8 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS')
 if ALLOWED_HOSTS and isinstance(ALLOWED_HOSTS, str) and '[' in ALLOWED_HOSTS:
     ALLOWED_HOSTS = json.loads(ALLOWED_HOSTS)
 
+CURRENT_HOST = os.getenv('CURRENT_HOST', 'localhost')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

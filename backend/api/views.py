@@ -1,11 +1,21 @@
 """Контроллеры."""
 
+from collections import deque
+import io
+
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas # type: ignore
 from rest_framework.permissions import (AllowAny,  # type: ignore
                                         IsAuthenticated)
 from rest_framework import viewsets  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
 from rest_framework.decorators import action  # type: ignore
 from rest_framework.response import Response  # type: ignore
+from django.shortcuts import get_object_or_404  # type: ignore
+from django.conf import settings  # type: ignore
+from rest_framework.views import APIView  # type: ignore
+from django.shortcuts import redirect  # type: ignore
+from django.http import FileResponse  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient
 from .serializers import (TagSerializer, RecipeWriteSerializer,
@@ -91,16 +101,63 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(status=204)
         return Response(status=404)
 
+    def convert_to_txt(self, recipes):
+        """Конвертация в TXT."""
+        if not recipes:
+            return 'Нет рецептов в списке покупок.'
+        ingredients = {}
+        for recipe in recipes:
+            for ingredient in recipe.ingredients.all():
+                name = ingredient.name
+                amount = ingredient.amount
+                unit = ingredient.measurement_unit
+                if name not in ingredients:
+                    ingredients[name] = {}
+                    ingredients[name][unit] = amount
+                else:
+                    if unit not in ingredients[name]:
+                        ingredients[name][unit] = amount
+                    elif unit == 'г' and 'кг' in ingredients[name]:
+                        ingredients[name]['кг'] += amount / 1000
+                    elif unit == 'кг' and 'г' in ingredients[name]:
+                        ingredients[name]['г'] += amount * 1000
+                    elif unit == 'л' and 'мл' in ingredients[name]:
+                        ingredients[name]['мл'] += amount * 1000
+                    elif unit == 'мл' and 'л' in ingredients[name]:
+                        ingredients[name]['л'] += amount / 1000
+                    else:
+                        ingredients[name][unit] += amount
+        if not ingredients:
+            return 'Нет ингредиентов для покупки.'
+        ingredients = dict(sorted(ingredients.items()))
+        txt = ['Список покупок.\n\n']
+        for name, units in ingredients.items():
+            if len(units) == 1:
+                unit, amount = next(iter(units.items()))
+                txt.append(f'{name} ({unit}) — {amount}\n')
+            else:
+                txt.append(f'{name}:\n')
+                for unit, amount in units.items():
+                    txt.append(f'  {unit} — {amount}\n')
+        return ''.join(txt)
+
     @action(
         detail=False,
         methods=('get',),
         permission_classes=(IsAuthenticated,)
     )
     def download_shopping_cart(self, request):
-        """Получение списка покупок в формате TXT."""
-        # serializer = self.get_serializer()
-        # serializer.save()
-        # return Response(serializer.data)
+        """Получение списка покупок в формате PDF."""
+        user = request.user
+        recipes = user.shopping_cart.all()
+        txt = self.convert_to_txt(recipes)
+        pdf_data = io.BytesIO()
+        pdf_in_memory = canvas.Canvas(pdf_data, pagesize=letter)
+        pdf_in_memory.drawString(100, 100, txt)
+        pdf_in_memory.save()
+        return FileResponse(pdf_data, as_attachment=True,
+                            filename='Список покупок.pdf',
+                            content_type='application/pdf')
 
     @action(
         detail=True,
@@ -125,6 +182,32 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 shopping_recipe.delete()
             return Response(status=204)
         return Response(status=404)
+
+    def convert_to_short_link(self, recipe_id):
+        """
+        Конвертация в короткую ссылку.
+
+        Используется преобразование id из 10тичной системы в 23-ричную.
+        """
+        number = deque()
+        while recipe_id:
+            number.appendleft(recipe_id % 23)
+            recipe_id //= 23
+        number = ''.join(map(str, number))
+        return f'{settings.CURRENT_HOST}/s/{number}'
+
+    @action(
+        detail=False,
+        methods=('get',),
+        permission_classes=(AllowAny,)
+    )
+    def get_link(self, request):
+        """Получение короткой ссылки."""
+        recipe_id = request.data.get('id')
+        get_object_or_404(Recipe, id=recipe_id)
+        return Response({
+            'short-link': self.convert_to_short_link(recipe_id)
+        })
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -167,7 +250,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'subscribe':
             return SubscriptionSerializer
         return UserWriteSerializer
-    
+
     @action(
         detail=True,
         methods=('post',),
@@ -210,3 +293,25 @@ class SubscriptionViewSet(viewsets.ReadOnlyModelViewSet):
         """Подписки."""
         user = self.request.user
         return user.subscriptions.all()
+
+
+class ShortLinkViewset(viewsets.ViewSet):
+    """Вьюсет коротких ссылок."""
+
+    permission_classes = (AllowAny,)
+
+    def retrieve(self, request, pk=None):
+        """Получение рецепта по короткой ссылке."""
+        recipe_id = int(pk, 23)
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+        serializer = RecipeReadSerializer(recipe)
+        return Response(serializer.data)
+
+
+class ShortLinkView(APIView):
+    """Класс коротких ссылок."""
+
+    def get(self, request, pk):
+        """Получение рецепта по короткой ссылке."""
+        recipe_id = int(pk, 23)
+        return redirect(f'{settings.CURRENT_HOST}/api/recipes/{recipe_id}/')

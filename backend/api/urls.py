@@ -3,7 +3,7 @@
 from django.urls import include, path  # type: ignore
 from rest_framework import routers  # type: ignore
 from .views import (TagViewSet, RecipeViewSet, IngredientViewSet, UserViewSet,
-                    SubscriptionViewSet)
+                    SubscriptionViewSet, ShortLinkView)
 
 app_name: str = 'api'
 
@@ -17,6 +17,7 @@ router_v1.register('subscriptions', SubscriptionViewSet,
 
 urlpatterns: list[path] = [
     path('', include(router_v1.urls)),
+    path('s/<int:pk>', ShortLinkView.as_view(), name='shortlink'),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.authtoken')),
 ]
