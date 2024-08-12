@@ -80,6 +80,12 @@ class UserWithSubscriptions(AbstractUser):
         verbose_name='Избранное',
         blank=True,
     )
+    shopping_cart = models.ManyToManyField(
+        Recipe,
+        related_name='shopping_cart',
+        verbose_name='Список покупок',
+        blank=True,
+    )
 
     class Meta:
         """Настройки."""

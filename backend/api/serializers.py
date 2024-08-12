@@ -16,6 +16,8 @@ class TagSerializer(serializers.ModelSerializer):
     """Сериализатор тегов."""
 
     class Meta:
+        """Настройки сериализатора."""
+
         model = Tag
         fields = ('id',
                   'name',
@@ -36,14 +38,28 @@ class Base64ImageField(serializers.ImageField):
         return super().to_internal_value(data)
 
 
+class IngredientSerializer(serializers.ModelSerializer):
+    """Сериализатор ингредиентов."""
+
+    class Meta:
+        """Настройки сериализатора."""
+
+        model = Ingredient
+        fields = ('id',
+                  'name',
+                  'measurement_unit')
+
+
 class RecipeWriteSerializer(serializers.ModelSerializer):
     """Сериализатор рецептов на запись."""
 
     image = Base64ImageField()
+    tags = TagSerializer(many=True)
+    ingredients = IngredientSerializer(many=True)
 
     class Meta:
         """Настройки сериализатора."""
-    
+
         model = Recipe
         fields = ('ingredients',
                   'tags',
@@ -113,7 +129,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         """Настройки сериализатора."""
-   
+
         model = Recipe
         fields = ('id',
                   'tags',
@@ -126,18 +142,6 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                   'text',
                   'cooking_time',
                   )
-
-
-class IngredientSerializer(serializers.ModelSerializer):
-    """Сериализатор ингредиентов."""
-
-    class Meta:
-        """Настройки сериализатора."""
-
-        model = Ingredient
-        fields = ('id',
-                  'name',
-                  'measurement_unit')
 
 
 class UserReadSerializer(serializers.ModelSerializer):
@@ -302,3 +306,21 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Создание подписки."""
         return User.subscriptions.create(**validated_data)
+
+
+class ShoppingSerializer(serializers.ModelSerializer):
+    """Сериализатор рецептов в списке покупок."""
+
+    image = Base64ImageField()
+
+    class Meta:
+        """Настройки сериализатора."""
+
+        model = Recipe
+        fields = ('id',
+                  'name',
+                  'image',
+                  'cooking_time')
+        read_only_fields = ('name',
+                            'image',
+                            'cooking_time')

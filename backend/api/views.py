@@ -12,7 +12,7 @@ from .serializers import (TagSerializer, RecipeWriteSerializer,
                           RecipeReadSerializer, IngredientSerializer,
                           UserReadSerializer, UserWriteSerializer,
                           PasswordSerializer, FavoriteSerializer,
-                          SubscriptionSerializer)
+                          SubscriptionSerializer, ShoppingSerializer)
 from .permissions import AuthorOnly, ForbiddenPermission
 
 
@@ -65,6 +65,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeReadSerializer
         if self.action == 'favorite':
             return FavoriteSerializer
+        if self.action == 'shopping_cart':
+            return ShoppingSerializer
         return RecipeWriteSerializer
 
     @action(
@@ -86,6 +88,41 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if favorite_recipes.exists():
             for recipe in favorite_recipes:
                 recipe.delete()
+            return Response(status=204)
+        return Response(status=404)
+
+    @action(
+        detail=False,
+        methods=('get',),
+        permission_classes=(IsAuthenticated,)
+    )
+    def download_shopping_cart(self, request):
+        """Получение списка покупок в формате TXT."""
+        # serializer = self.get_serializer()
+        # serializer.save()
+        # return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=('post',),
+        permission_classes=(IsAuthenticated,)
+    )
+    def shopping_cart(self, request):
+        """Добавление рецепта в список покупок."""
+        user = request.user
+        serializer = self.get_serializer(user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @shopping_cart.mapping.delete
+    def delete_shopping_cart(self, request):
+        """Удаление из списка покупок."""
+        user = request.user
+        shopping_cart = user.shopping_cart.filter(recipe=self.get_object())
+        if shopping_cart.exists():
+            for shopping_recipe in shopping_cart:
+                shopping_recipe.delete()
             return Response(status=204)
         return Response(status=404)
 
