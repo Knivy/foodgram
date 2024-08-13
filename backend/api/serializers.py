@@ -324,3 +324,15 @@ class ShoppingSerializer(serializers.ModelSerializer):
         read_only_fields = ('name',
                             'image',
                             'cooking_time')
+
+
+class AvatarSerializer(serializers.ModelSerializer):
+    """Сериализатор для аватара."""
+
+    avatar = Base64ImageField()
+
+    class Meta:
+        """Настройки сериализатора."""
+
+        model = User
+        fields = ('avatar',)

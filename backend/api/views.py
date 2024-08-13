@@ -4,7 +4,7 @@ from collections import deque
 import io
 
 from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas # type: ignore
+from reportlab.pdfgen import canvas  # type: ignore
 from rest_framework.permissions import (AllowAny,  # type: ignore
                                         IsAuthenticated)
 from rest_framework import viewsets  # type: ignore
@@ -22,7 +22,8 @@ from .serializers import (TagSerializer, RecipeWriteSerializer,
                           RecipeReadSerializer, IngredientSerializer,
                           UserReadSerializer, UserWriteSerializer,
                           PasswordSerializer, FavoriteSerializer,
-                          SubscriptionSerializer, ShoppingSerializer)
+                          SubscriptionSerializer, ShoppingSerializer,
+                          AvatarSerializer)
 from .permissions import AuthorOnly, ForbiddenPermission
 
 
@@ -219,6 +220,28 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
+        methods=('put',),
+        permission_classes=(IsAuthenticated,),
+        url_path='me/avatar',
+        url_name='user_avatar',
+    )
+    def put_user_avatar(self, request):
+        """Изменение аватара."""
+        user = request.user
+        serializer = self.get_serializer(user)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @put_user_avatar.mapping.delete
+    def delete_user_avatar(self, request):
+        """Удаление аватара."""
+        user = request.user
+        user.avatar.delete()
+        return Response(status=204)
+
+    @action(
+        detail=False,
         methods=('get',),
         permission_classes=(IsAuthenticated,)
     )
@@ -249,6 +272,8 @@ class UserViewSet(viewsets.ModelViewSet):
             return PasswordSerializer
         if self.action == 'subscribe':
             return SubscriptionSerializer
+        if self.action == 'put_user_avatar':
+            return AvatarSerializer
         return UserWriteSerializer
 
     @action(
