@@ -106,7 +106,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             if current_ingredient in ingredients_dict:
                 raise ValidationError('Ингредиенты не должны повторяться.')
             ingredients_dict[current_ingredient] = amount
-        recipe_ingredients = instance.ingredients.all()    
+        recipe_ingredients = instance.ingredients.all()
         for recipe_ingredient in recipe_ingredients:
             if recipe_ingredient in ingredients_dict:
                 recipe_ingredient.amount = ingredients_dict[recipe_ingredient]

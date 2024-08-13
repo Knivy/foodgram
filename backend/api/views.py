@@ -3,11 +3,11 @@
 from collections import deque
 import io
 
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter  # type: ignore
 from reportlab.pdfgen import canvas  # type: ignore
 from rest_framework.permissions import (AllowAny,  # type: ignore
                                         IsAuthenticated)
-from rest_framework import viewsets  # type: ignore
+from rest_framework import filters, viewsets  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
 from rest_framework.decorators import action  # type: ignore
 from rest_framework.response import Response  # type: ignore
@@ -16,6 +16,7 @@ from django.conf import settings  # type: ignore
 from rest_framework.views import APIView  # type: ignore
 from django.shortcuts import redirect  # type: ignore
 from django.http import FileResponse  # type: ignore
+from django_filters.rest_framework import DjangoFilterBackend  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient
 from .serializers import (TagSerializer, RecipeWriteSerializer,
@@ -25,6 +26,7 @@ from .serializers import (TagSerializer, RecipeWriteSerializer,
                           SubscriptionSerializer, ShoppingSerializer,
                           AvatarSerializer)
 from .permissions import AuthorOnly, ForbiddenPermission
+from .filters import RecipeFilter
 
 
 User = get_user_model()
@@ -57,6 +59,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     http_method_names = ('get', 'post', 'patch', 'delete')
     queryset = Recipe.objects.all()
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = RecipeFilter
 
     def get_permissions(self):
         """Разрешения."""
