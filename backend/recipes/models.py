@@ -91,6 +91,8 @@ class Recipe(BaseNameModel):
     pub_date = models.DateTimeField(verbose_name='Дата публикации',
                                     auto_now_add=True,
                                     db_index=True)
+    short_url = models.URLField(verbose_name='Короткая ссылка',
+                                blank=True, null=True)
 
     class Meta:
         """Настройки."""

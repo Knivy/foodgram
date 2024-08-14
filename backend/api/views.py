@@ -1,6 +1,5 @@
 """Контроллеры."""
 
-from collections import deque
 import io
 
 from reportlab.lib.pagesizes import letter  # type: ignore
@@ -188,19 +187,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(status=204)
         return Response(status=404)
 
-    def convert_to_short_link(self, recipe_id):
-        """
-        Конвертация в короткую ссылку.
-
-        Используется преобразование id из 10тичной системы в 23-ричную.
-        """
-        number = deque()
-        while recipe_id:
-            number.appendleft(recipe_id % 23)
-            recipe_id //= 23
-        number = ''.join(map(str, number))
-        return f'{settings.CURRENT_HOST}/s/{number}'
-
     @action(
         detail=False,
         methods=('get',),
@@ -209,9 +195,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request):
         """Получение короткой ссылки."""
         recipe_id = request.data.get('id')
-        get_object_or_404(Recipe, id=recipe_id)
+        recipe = get_object_or_404(Recipe, id=recipe_id)
         return Response({
-            'short-link': self.convert_to_short_link(recipe_id)
+            'short-link':
+            f'{settings.CURRENT_HOST}/s/{recipe.short_url}',
         })
 
 

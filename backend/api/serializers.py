@@ -1,6 +1,7 @@
 """Сериализаторы."""
 
 import base64
+from collections import deque
 
 from rest_framework import serializers  # type: ignore
 from django.core.files.base import ContentFile  # type: ignore
@@ -68,10 +69,25 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                   'text',
                   'cooking_time')
 
+    def convert_to_short_link(self, recipe_id):
+        """
+        Конвертация в короткую ссылку.
+
+        Используется преобразование id из 10тичной системы в 23-ричную.
+        """
+        number = deque()
+        while recipe_id:
+            number.appendleft(recipe_id % 23)
+            recipe_id //= 23
+        number = ''.join(map(str, number))
+        return f'{number}'
+
     def create(self, validated_data):
         """Создание рецепта."""
         ingredients = validated_data.pop('ingredients')
-        recipe = Recipe.objects.create(**validated_data)
+        recipe = Recipe.objects.create(
+            **validated_data)
+        recipe.short_url = self.convert_to_short_link(recipe.id)
         for ingredient in ingredients:
             amount = ingredient.pop('amount')
             ingredient_object, status = Ingredient.objects.get_or_create(
@@ -81,6 +97,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 amount=amount,
                 recipe=recipe,
             )
+        recipe.save()
         return recipe
 
     def update(self, instance, validated_data):
