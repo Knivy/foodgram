@@ -2,8 +2,8 @@
 
 import io
 
-from reportlab.lib.pagesizes import letter  # type: ignore
-from reportlab.pdfgen import canvas  # type: ignore
+# from reportlab.lib.pagesizes import letter  # type: ignore
+# from reportlab.pdfgen import canvas  # type: ignore
 from rest_framework.permissions import (AllowAny,  # type: ignore
                                         IsAuthenticated)
 from rest_framework import filters, viewsets  # type: ignore
@@ -155,13 +155,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
         recipes = user.shopping_cart.all()
         txt = self.convert_to_txt(recipes)
-        pdf_data = io.BytesIO()
-        pdf_in_memory = canvas.Canvas(pdf_data, pagesize=letter)
-        pdf_in_memory.drawString(100, 100, txt)
-        pdf_in_memory.save()
-        return FileResponse(pdf_data, as_attachment=True,
-                            filename='Список покупок.pdf',
-                            content_type='application/pdf')
+        return FileResponse(txt, as_attachment=True,
+                            filename='Список покупок.txt')
+        # pdf_data = io.BytesIO()
+        # pdf_in_memory = canvas.Canvas(pdf_data, pagesize=letter)
+        # pdf_in_memory.drawString(100, 100, txt)
+        # pdf_in_memory.save()
+        # return FileResponse(pdf_data, as_attachment=True,
+        #                     filename='Список покупок.pdf',
+        #                     content_type='application/pdf')
 
     @action(
         detail=True,
