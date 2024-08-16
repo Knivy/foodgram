@@ -76,7 +76,7 @@ class UserWithSubscriptions(AbstractUser):
     )
     favorites = models.ManyToManyField(
         Recipe,
-        related_name='favourites',
+        related_name='favorites',
         verbose_name='Избранное',
         blank=True,
     )

@@ -139,28 +139,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return instance
 
 
-class RecipeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор рецептов на чтение."""
-
-    image = Base64ImageField()
-
-    class Meta:
-        """Настройки сериализатора."""
-
-        model = Recipe
-        fields = ('id',
-                  'tags',
-                  'author',
-                  'ingredients',
-                  'is_favorited',
-                  'is_in_shopping_cart',
-                  'name',
-                  'image',
-                  'text',
-                  'cooking_time',
-                  )
-
-
 class UserReadSerializer(serializers.ModelSerializer):
     """Сериализатор пользователя."""
 
@@ -189,6 +167,47 @@ class UserReadSerializer(serializers.ModelSerializer):
             username = self.instance.username
             return user.subscriptions.filter(username=username).exists()
         return False
+
+
+class RecipeReadSerializer(serializers.ModelSerializer):
+    """Сериализатор рецептов на чтение."""
+
+    image = Base64ImageField()
+    tags = TagSerializer(many=True)
+    ingredients = IngredientSerializer(many=True)
+    author = UserReadSerializer()
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
+
+    class Meta:
+        """Настройки сериализатора."""
+
+        model = Recipe
+        fields = ('id',
+                  'tags',
+                  'author',
+                  'ingredients',
+                  'is_favorited',
+                  'is_in_shopping_cart',
+                  'name',
+                  'image',
+                  'text',
+                  'cooking_time',
+                  )
+
+    def get_is_favorited(self, data):
+        """Поле, добавлен ли рецепт в избранное."""
+        request = self.context.get('request')
+        if not request:
+            raise ValidationError('Нет данных запроса.')
+        return request.user.favorites.filter(recipe=self.instance).exists()
+
+    def get_is_in_shopping_cart(self, data):
+        """Поле, добавлен ли рецепт в список покупок."""
+        request = self.context.get('request')
+        if not request:
+            raise ValidationError('Нет данных запроса.')
+        return request.user.shopping_cart.filter(recipe=self.instance).exists()
 
 
 class UserWriteSerializer(serializers.ModelSerializer):
