@@ -28,7 +28,7 @@ services:
     build: ../nginx/
     env_file: .env
     ports:
-      - "80:80"
+      - "8000:80"
     volumes:
       - static:/static
       - media:/app/media/

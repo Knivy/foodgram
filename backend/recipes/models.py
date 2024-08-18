@@ -11,7 +11,8 @@ from django.core.exceptions import ValidationError  # type: ignore
 
 from .constants import (MAX_NAME_LENGTH, MAX_SLUG_LENGTH, MAX_UNIT_LENGTH,
                         MAX_INGREDIENT_AMOUNT, MIN_INGREDIENT_AMOUNT,
-                        MAX_COOKING_TIME, MIN_COOKING_TIME)
+                        MAX_COOKING_TIME, MIN_COOKING_TIME,
+                        MAX_TAG_NAME_LENGTH, MAX_INGREDIENT_NAME_LENGTH)
 
 User = get_user_model()
 
@@ -30,45 +31,60 @@ def validate_slug(slug):
     return slug
 
 
-class BaseNameModel(models.Model):
-    """Базовая модель с именем."""
+class Ingredient(models.Model):
+    """Модель ингредиента."""
 
-    name = models.CharField(max_length=MAX_NAME_LENGTH,
+    name = models.CharField(max_length=MAX_INGREDIENT_NAME_LENGTH,
                             validators=(MaxLengthValidator,),
                             verbose_name='Название',
                             unique=True)
+    measurement_unit = models.CharField(max_length=MAX_UNIT_LENGTH,
+                                        validators=(MaxLengthValidator,),
+                                        verbose_name='Единицы измерения')
 
     class Meta:
         """Настройки."""
 
-        abstract = True
         ordering = ('name',)
+        verbose_name = 'Ингредиент'
+        verbose_name_plural = 'Ингредиенты'
 
     def __str__(self):
         """Строковое представление."""
         return self.name
 
 
-class Ingredient(BaseNameModel):
-    """Модель ингредиента."""
-
-    measurement_unit = models.CharField(max_length=MAX_UNIT_LENGTH,
-                                        validators=(MaxLengthValidator,),
-                                        verbose_name='Единицы измерения')
-
-
-class Tag(BaseNameModel):
+class Tag(models.Model):
     """Модель тега."""
 
+    name = models.CharField(max_length=MAX_TAG_NAME_LENGTH,
+                            validators=(MaxLengthValidator,),
+                            verbose_name='Название',
+                            unique=True)
     slug = models.SlugField(unique=True, max_length=MAX_SLUG_LENGTH,
                             validators=(MaxLengthValidator,
                                         validate_slug),
                             verbose_name='Слаг')
 
+    class Meta:
+        """Настройки."""
 
-class Recipe(BaseNameModel):
+        ordering = ('name',)
+        verbose_name = 'Тег'
+        verbose_name_plural = 'Теги'
+
+    def __str__(self):
+        """Строковое представление."""
+        return self.name
+
+
+class Recipe(models.Model):
     """Модель рецепта."""
 
+    name = models.CharField(max_length=MAX_NAME_LENGTH,
+                            validators=(MaxLengthValidator,),
+                            verbose_name='Название',
+                            unique=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE,
                                related_name='recipes',
                                verbose_name='Автор')
@@ -98,6 +114,12 @@ class Recipe(BaseNameModel):
         """Настройки."""
 
         ordering = ('-pub_date',)
+        verbose_name = 'Рецепт'
+        verbose_name_plural = 'Рецепты'
+
+    def __str__(self):
+        """Строковое представление."""
+        return self.name
 
 
 class RecipeIngredient(models.Model):
@@ -112,6 +134,13 @@ class RecipeIngredient(models.Model):
         MinValueValidator(MIN_INGREDIENT_AMOUNT)),
         verbose_name='Количество')
 
+    class Meta:
+        """Настройки."""
+
+        verbose_name = 'Ингредиент в рецепте'
+        verbose_name_plural = 'Ингредиенты в рецептах'
+
     def __str__(self):
         """Строковое представление."""
-        return f'{self.ingredient.name}: {self.amount} {self.ingredient.units}'
+        return (f'{self.ingredient.name}: {self.amount} '
+                f'{self.ingredient.measurement_unit}')

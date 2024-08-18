@@ -3,11 +3,11 @@
 from django.db import models  # type:ignore
 from django.contrib.auth.models import AbstractUser  # type:ignore
 from django.core.validators import MaxLengthValidator  # type:ignore
+from django.conf import settings  # type: ignore
 
 from .validators import (validate_username, validate_email,
                          MaxLengthPasswordValidator)
 from .constants import NAME_MAX_LENGTH, EMAIL_MAX_LENGTH, MAX_PASSWORD_LENGTH
-from recipes.models import Recipe
 
 
 class Role(models.TextChoices):
@@ -64,7 +64,7 @@ class UserWithSubscriptions(AbstractUser):
     avatar = models.ImageField(
         verbose_name='Аватар',
         upload_to='users/',
-        default='users/default.png',
+        default=settings.DEFAULT_AVATAR,
         blank=True,
     )
     role = models.CharField(
@@ -75,13 +75,13 @@ class UserWithSubscriptions(AbstractUser):
         default=Role.USER,
     )
     favorites = models.ManyToManyField(
-        Recipe,
+        'recipes.Recipe',
         related_name='favorites',
         verbose_name='Избранное',
         blank=True,
     )
     shopping_cart = models.ManyToManyField(
-        Recipe,
+        'recipes.Recipe',
         related_name='shopping_cart',
         verbose_name='Список покупок',
         blank=True,

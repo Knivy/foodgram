@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
+    'django_filters',
     'users.apps.UsersConfig',
     'api.apps.ApiConfig',
     'recipes.apps.RecipesConfig',
@@ -144,3 +145,4 @@ DJOSER = {
 }
 
 AUTH_USER_MODEL = 'users.UserWithSubscriptions'
+DEFAULT_AVATAR = 'users/default.png'

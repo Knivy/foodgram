@@ -11,11 +11,11 @@ UserAdmin.fieldsets += (
                                  'shopping_cart')}),
 )
 UserAdmin.list_display += (
-    'subscriptions',
     'avatar',
     'role',
-    'favorites',
-    'shopping_cart',
 )
 UserAdmin.search_fields = ('email', 'username')
+UserAdmin.verbose_name = 'Пользователь'
+UserAdmin.actions += ('change_selected',
+                      'delete_selected')
 admin.site.register(UserWithSubscriptions, UserAdmin)

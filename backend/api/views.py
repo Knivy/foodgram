@@ -23,7 +23,7 @@ from .serializers import (TagSerializer, RecipeWriteSerializer,
                           UserReadSerializer, UserWriteSerializer,
                           PasswordSerializer, FavoriteSerializer,
                           SubscriptionSerializer, ShoppingSerializer,
-                          AvatarSerializer)
+                          AvatarSerializer, SubscriptionCreateSerializer)
 from .permissions import AuthorOnly, ForbiddenPermission
 from .filters import RecipeFilter
 
@@ -48,24 +48,45 @@ class TagViewSet(BaseReadOnlyViewset):
 class IngredientViewSet(BaseReadOnlyViewset):
     """Вьюсет ингредиентов."""
 
-    queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    search_fields = ('^name',)
+
+    def get_queryset(self):
+        """Поиск по вхождению в начало строки."""
+        query = self.request.GET.get('name')
+        if query:
+            return Ingredient.objects.filter(name__istartswith=query)
+        return Ingredient.objects.all()
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """Вьюсет рецептов."""
 
     http_method_names = ('get', 'post', 'patch', 'delete')
-    queryset = Recipe.objects.all()
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = RecipeFilter
+    queryset = Recipe.objects.all()
+
+    # def get_queryset(self):
+    #     """Получение списка рецептов."""
+    #     queryset = Recipe.objects.all()
+    #     query = self.request.GET.get('author')
+    #     if query:
+    #         queryset = queryset.filter(author=query)
+    #     query = self.request.GET.get('limit')
+    #     if query:
+    #         queryset = queryset[:int(query)]
+    #     return queryset
 
     def get_permissions(self):
         """Разрешения."""
-        if self.action in {'list', 'retrieve'}:
+        if self.action in {'list', 'retrieve', 'get_link'}:
             self.permission_classes = (AllowAny,)
-        elif self.action == 'create':
+        elif self.action in {'create',
+                             'download_shopping_cart',
+                             'favorite',
+                             'delete_favorite',
+                             'shopping_cart',
+                             'delete_shopping_cart'}:
             self.permission_classes = (IsAuthenticated,)
         elif self.action in {'partial_update', 'destroy'}:
             self.permission_classes = (AuthorOnly,)
@@ -88,17 +109,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=('post',),
         permission_classes=(IsAuthenticated,)
     )
-    def favorite(self, request):
+    def favorite(self, request, pk):
         """Добавление в избранное."""
-        serializer = self.get_serializer()
+        serializer = self.get_serializer(data={'id': pk})
+        serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
     @favorite.mapping.delete
-    def delete_favorite(self, request):
+    def delete_favorite(self, request, pk):
         """Удалить из избранного."""
         user = request.user
-        favorite_recipes = user.favorites.filter(recipe=self.get_object())
+        favorite_recipes = user.favorites.filter(id=pk)
         if favorite_recipes.exists():
             for recipe in favorite_recipes:
                 recipe.delete()
@@ -170,19 +192,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=('post',),
         permission_classes=(IsAuthenticated,)
     )
-    def shopping_cart(self, request):
+    def shopping_cart(self, request, pk):
         """Добавление рецепта в список покупок."""
         user = request.user
-        serializer = self.get_serializer(user, data=request.data)
+        serializer = self.get_serializer(user, data={'id': pk})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
     @shopping_cart.mapping.delete
-    def delete_shopping_cart(self, request):
+    def delete_shopping_cart(self, request, pk):
         """Удаление из списка покупок."""
         user = request.user
-        shopping_cart = user.shopping_cart.filter(recipe=self.get_object())
+        shopping_cart = user.shopping_cart.filter(id=pk)
         if shopping_cart.exists():
             for shopping_recipe in shopping_cart:
                 shopping_recipe.delete()
@@ -190,26 +212,33 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return Response(status=404)
 
     @action(
-        detail=False,
+        detail=True,
         methods=('get',),
-        permission_classes=(AllowAny,)
+        permission_classes=(AllowAny,),
+        url_path='get-link',
+        url_name='get_link',
     )
-    def get_link(self, request):
+    def get_link(self, request, pk):
         """Получение короткой ссылки."""
-        recipe_id = request.data.get('id')
-        recipe = get_object_or_404(Recipe, id=recipe_id)
+        recipe = get_object_or_404(Recipe, id=pk)
         return Response({
             'short-link':
-            f'{settings.CURRENT_HOST}/s/{recipe.short_url}',
+            f'{settings.CURRENT_HOST}/api/s/{recipe.short_url}',
         })
 
 
 class UserViewSet(viewsets.ModelViewSet):
     """Вьюсет пользователей."""
 
-    http_method_names = ('get', 'post')
-    queryset = User.objects.all()
+    http_method_names = ('get', 'post', 'put', 'delete')
     permission_classes = (AllowAny,)
+
+    def get_queryset(self):
+        """Получение списка пользователей."""
+        query = self.request.GET.get('limit')
+        if query:
+            return User.objects.all()[:int(query)]
+        return User.objects.all()
 
     @action(
         detail=False,
@@ -221,7 +250,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def put_user_avatar(self, request):
         """Изменение аватара."""
         user = request.user
-        serializer = self.get_serializer(user)
+        serializer = self.get_serializer(user, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -231,6 +260,8 @@ class UserViewSet(viewsets.ModelViewSet):
         """Удаление аватара."""
         user = request.user
         user.avatar.delete()
+        user.avatar = settings.DEFAULT_AVATAR
+        user.save()
         return Response(status=204)
 
     @action(
@@ -252,10 +283,13 @@ class UserViewSet(viewsets.ModelViewSet):
     def set_password(self, request):
         """Установка пароля."""
         user = request.user
-        serializer = self.get_serializer(user, data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        # serializer.save()
+        password = serializer.validated_data['new_password']
+        user.set_password(password)
+        user.save()
+        return Response(status=204)
 
     def get_serializer_class(self):
         """Выбор сериализатора."""
@@ -264,9 +298,13 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'set_password':
             return PasswordSerializer
         if self.action == 'subscribe':
-            return SubscriptionSerializer
+            return SubscriptionCreateSerializer
         if self.action == 'put_user_avatar':
             return AvatarSerializer
+        if self.action == 'delete_user_avatar':
+            return None
+        if self.action == 'subscriptions':
+            return SubscriptionSerializer
         return UserWriteSerializer
 
     @action(
@@ -274,62 +312,107 @@ class UserViewSet(viewsets.ModelViewSet):
         methods=('post',),
         permission_classes=(IsAuthenticated,)
     )
-    def subscribe(self, request):
+    def subscribe(self, request, pk):
         """Подписка."""
         user = request.user
-        serializer = self.get_serializer(user, data=request.data)
+        serializer = self.get_serializer(user,
+                                         data={'id': pk},
+                                         context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
     @subscribe.mapping.delete
-    def delete_subscribe(self, request):
+    def delete_subscribe(self, request, pk):
         """Удалить из подписок."""
         user = request.user
-        subscriptions = user.subscriptions.filter(id=request.data['id'])
+        subscriptions = user.subscriptions.filter(id=pk)
         if subscriptions.exists():
             for subscription in subscriptions:
                 subscription.delete()
             return Response(status=204)
         return Response(status=404)
 
-
-class SubscriptionViewSet(viewsets.ReadOnlyModelViewSet):
-    """Вьюсет подписок."""
-
-    sserializer_class = SubscriptionSerializer
-
     def get_permissions(self):
-        """Разрешения."""
-        if self.action == 'list':
-            self.permission_classes = (AllowAny,)
-        else:
+        if self.action in {'partial_update', 'destroy'}:
             self.permission_classes = (ForbiddenPermission,)
         return super().get_permissions()
 
-    def get_queryset(self):
+    @action(
+        detail=False,
+        methods=('get',),
+        permission_classes=(IsAuthenticated,)
+    )
+    def subscriptions(self, request):
+        """Список подписок."""
+        serializer = self.get_serializer(self.get_subscriptions_queryset(),
+                                         many=True,
+                                         context={'request': request})
+        return Response(serializer.data)
+
+    def get_subscriptions_queryset(self):
         """Подписки."""
         user = self.request.user
-        return user.subscriptions.all()
+        queryset = user.subscriptions.all()
+        query = self.request.GET.get('limit')
+        if query:
+            queryset = queryset[:int(query)]
+        return queryset
 
 
-class ShortLinkViewset(viewsets.ViewSet):
-    """Вьюсет коротких ссылок."""
+# class SubscriptionView(APIView):
+#     """Вью подписок."""
 
-    permission_classes = (AllowAny,)
+#     serializer_class = SubscriptionSerializer
 
-    def retrieve(self, request, pk=None):
-        """Получение рецепта по короткой ссылке."""
-        recipe_id = int(pk, 23)
-        recipe = get_object_or_404(Recipe, id=recipe_id)
-        serializer = RecipeReadSerializer(recipe)
-        return Response(serializer.data)
+#     def get(self, request):
+#         """Список подписок."""
+#         serializer = self.get_serializer(self.get_queryset(),
+#                                          many=True,
+#                                          context={'request': request})
+#         return Response(serializer.data)
+
+#     def get_permissions(self):
+#         """Разрешения."""
+#         if self.action == 'list':
+#             self.permission_classes = (AllowAny,)
+#         else:
+#             self.permission_classes = (ForbiddenPermission,)
+#         return super().get_permissions()
+
+#     def get_queryset(self):
+#         """Подписки."""
+#         user = self.request.user
+#         queryset = user.subscriptions.all()
+#         query = self.request.GET.get('limit')
+#         if query:
+#             queryset = queryset[:int(query)]
+#         return queryset
+
+
+# class ShortLinkViewset(viewsets.ViewSet):
+#     """Вьюсет коротких ссылок."""
+
+#     permission_classes = (AllowAny,)
+
+#     def retrieve(self, request, pk=None):
+#         """Получение рецепта по короткой ссылке."""
+#         recipe_id = int(pk, 23)
+#         recipe = get_object_or_404(Recipe, id=recipe_id)
+#         serializer = RecipeReadSerializer(recipe)
+#         return Response(serializer.data)
 
 
 class ShortLinkView(APIView):
     """Класс коротких ссылок."""
 
-    def get(self, request, pk):
+    permission_classes = (AllowAny,)
+
+    def get(self, request, short_link):
         """Получение рецепта по короткой ссылке."""
-        recipe_id = int(pk, 23)
-        return redirect(f'{settings.CURRENT_HOST}/api/recipes/{recipe_id}/')
+        # recipe_id = int(str(pk), 23)
+        # return redirect(f'{settings.CURRENT_HOST}/api/recipes/{recipe_id}/')
+        recipe = get_object_or_404(Recipe, short_url=short_link)
+        serializer = RecipeReadSerializer(recipe,
+                                          context={'request': request})
+        return Response(serializer.data)
