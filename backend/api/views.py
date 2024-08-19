@@ -21,8 +21,8 @@ from recipes.models import Tag, Recipe, Ingredient
 from .serializers import (TagSerializer, RecipeWriteSerializer,
                           RecipeReadSerializer, IngredientSerializer,
                           UserReadSerializer, UserWriteSerializer,
-                          PasswordSerializer, FavoriteSerializer,
-                          SubscriptionSerializer, ShoppingSerializer,
+                          PasswordSerializer, FavoriteCreateSerializer,
+                          SubscriptionSerializer, ShoppingCreateSerializer,
                           AvatarSerializer, SubscriptionCreateSerializer)
 from .permissions import AuthorOnly, ForbiddenPermission
 from .filters import RecipeFilter
@@ -99,9 +99,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.action in {'list', 'retrieve'}:
             return RecipeReadSerializer
         if self.action == 'favorite':
-            return FavoriteSerializer
+            return FavoriteCreateSerializer
         if self.action == 'shopping_cart':
-            return ShoppingSerializer
+            return ShoppingCreateSerializer
         return RecipeWriteSerializer
 
     @action(
@@ -111,7 +111,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, pk):
         """Добавление в избранное."""
-        serializer = self.get_serializer(data={'id': pk})
+        recipe = get_object_or_404(Recipe, id=pk)
+        serializer = self.get_serializer(recipe,
+                                         data={'id': pk},
+                                         context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -120,10 +123,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def delete_favorite(self, request, pk):
         """Удалить из избранного."""
         user = request.user
-        favorite_recipes = user.favorites.filter(id=pk)
-        if favorite_recipes.exists():
-            for recipe in favorite_recipes:
-                recipe.delete()
+        recipe = get_object_or_404(Recipe, id=pk)
+        if user.favorites.filter(id=pk).exists():
+            user.favorites.remove(recipe)
             return Response(status=204)
         return Response(status=404)
 
@@ -133,9 +135,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return 'Нет рецептов в списке покупок.'
         ingredients = {}
         for recipe in recipes:
-            for ingredient in recipe.ingredients.all():
+            for recipe_ingredient in recipe.ingredients.through.objects.all():
+                ingredient = recipe_ingredient.ingredient
                 name = ingredient.name
-                amount = ingredient.amount
+                amount = recipe_ingredient.amount
                 unit = ingredient.measurement_unit
                 if name not in ingredients:
                     ingredients[name] = {}
@@ -194,8 +197,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def shopping_cart(self, request, pk):
         """Добавление рецепта в список покупок."""
-        user = request.user
-        serializer = self.get_serializer(user, data={'id': pk})
+        recipe = get_object_or_404(Recipe, id=pk)
+        serializer = self.get_serializer(recipe,
+                                         data={'id': pk},
+                                         context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -204,10 +209,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def delete_shopping_cart(self, request, pk):
         """Удаление из списка покупок."""
         user = request.user
-        shopping_cart = user.shopping_cart.filter(id=pk)
-        if shopping_cart.exists():
-            for shopping_recipe in shopping_cart:
-                shopping_recipe.delete()
+        recipe = get_object_or_404(Recipe, id=pk)
+        if user.shopping_cart.filter(id=pk).exists():
+            user.shopping_cart.remove(recipe)
             return Response(status=204)
         return Response(status=404)
 
@@ -326,10 +330,9 @@ class UserViewSet(viewsets.ModelViewSet):
     def delete_subscribe(self, request, pk):
         """Удалить из подписок."""
         user = request.user
-        subscriptions = user.subscriptions.filter(id=pk)
-        if subscriptions.exists():
-            for subscription in subscriptions:
-                subscription.delete()
+        subscription = get_object_or_404(User, id=pk)
+        if user.subscriptions.filter(id=pk).exists():
+            user.subscriptions.remove(subscription)
             return Response(status=204)
         return Response(status=404)
 

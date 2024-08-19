@@ -3,16 +3,8 @@
 from enum import IntEnum
 
 from django_filters import rest_framework as filters  # type: ignore
-from django.shortcuts import get_object_or_404  # type: ignore
 
 from recipes.models import Recipe, Tag
-
-
-class FlagsEnum(IntEnum):
-    """Перечисление флагов."""
-
-    yes = 1
-    no = 0
 
 
 class RecipeFilter(filters.FilterSet):
@@ -45,22 +37,32 @@ class RecipeFilter(filters.FilterSet):
     def filter_queryset(self, queryset):
         """Фильтрация по флагам."""
         request = self.request
+        user = request.user
+        auth = user.is_authenticated
         query = request.GET.get('is_favorited')
         if query:
-            if query == FlagsEnum.yes:
-                user = request.user
-                queryset = queryset.filter(favorites__user=user)
-            elif query == FlagsEnum.no:
-                user = request.user
-                queryset = queryset.exclude(favorites__user=user)
+            if query == '1':
+                if auth:
+                    queryset = queryset.filter(favorites__in=(user,))
+                else:
+                    return queryset.none()
+            elif query == '0':
+                if auth:
+                    queryset = queryset.exclude(favorites__in=(user,))
+                else:
+                    return queryset.none()
         query = request.GET.get('is_in_shopping_cart')
         if query:
-            if query == FlagsEnum.yes:
-                user = request.user
-                queryset = queryset.filter(shopping_cart__user=user)
-            elif query == FlagsEnum.no:
-                user = request.user
-                queryset = queryset.exclude(shopping_cart__user=user)    
+            if query == '1':
+                if auth:
+                    queryset = queryset.filter(shopping_cart__in=(user,))
+                else:
+                    return queryset.none()
+            elif query == '0':
+                if auth:
+                    queryset = queryset.exclude(shopping_cart__in=(user,))
+                else:
+                    return queryset.none()
         query = request.GET.get('author')
         if query:
             queryset = queryset.filter(author__id=int(query))
@@ -77,5 +79,5 @@ class RecipeFilter(filters.FilterSet):
             #     queryset = queryset.filter(tags__in=tag)
         query = self.request.GET.get('limit')
         if query:
-            queryset = queryset[:int(query)]   
+            queryset = queryset[:int(query)]
         return queryset

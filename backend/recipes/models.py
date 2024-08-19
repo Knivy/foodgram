@@ -95,9 +95,14 @@ class Recipe(models.Model):
     text = models.TextField(verbose_name='Текст рецепта')
     ingredients = models.ManyToManyField(Ingredient,
                                          through='RecipeIngredient',
-                                         verbose_name='Ингредиенты')
-    tags = models.ManyToManyField(Tag, related_name='recipes',
-                                  verbose_name='Теги')
+                                         verbose_name='Ингредиенты',
+                                         blank=True,
+                                         )
+    tags = models.ManyToManyField(Tag,
+                                  related_name='recipes',
+                                  verbose_name='Теги',
+                                  blank=True,
+                                  )
     cooking_time = models.PositiveSmallIntegerField(
         validators=(
                     MaxValueValidator(MAX_COOKING_TIME),
@@ -125,9 +130,11 @@ class Recipe(models.Model):
 class RecipeIngredient(models.Model):
     """Промежуточная таблица с указанием количества ингредиентов."""
 
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
+    recipe = models.ForeignKey(Recipe,
+                               on_delete=models.CASCADE,
                                related_name='recipe_ingredients')
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE,
+    ingredient = models.ForeignKey(Ingredient,
+                                   on_delete=models.CASCADE,
                                    related_name='recipes')
     amount = models.PositiveSmallIntegerField(validators=(
         MaxValueValidator(MAX_INGREDIENT_AMOUNT),
