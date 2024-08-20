@@ -36,4 +36,6 @@ services:
     depends_on:
       - backend
   redis:
-    build: ../redis/      
+    build: ../redis/ 
+    ports:
+      - "6379:6379"     

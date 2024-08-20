@@ -1,7 +1,5 @@
 """Контроллеры."""
 
-import io
-
 # from reportlab.lib.pagesizes import letter  # type: ignore
 # from reportlab.pdfgen import canvas  # type: ignore
 from rest_framework.permissions import (AllowAny,  # type: ignore
@@ -13,9 +11,9 @@ from rest_framework.response import Response  # type: ignore
 from django.shortcuts import get_object_or_404  # type: ignore
 from django.conf import settings  # type: ignore
 from rest_framework.views import APIView  # type: ignore
-from django.shortcuts import redirect  # type: ignore
 from django.http import FileResponse  # type: ignore
 from django_filters.rest_framework import DjangoFilterBackend  # type: ignore
+from django.views.decorators.cache import cache_page  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient
 from .serializers import (TagSerializer, RecipeWriteSerializer,
@@ -26,12 +24,13 @@ from .serializers import (TagSerializer, RecipeWriteSerializer,
                           AvatarSerializer, SubscriptionCreateSerializer)
 from .permissions import AuthorOnly, ForbiddenPermission
 from .filters import RecipeFilter
+from .drf_cache import CacheResponseMixin
 
 
 User = get_user_model()
 
 
-class BaseReadOnlyViewset(viewsets.ReadOnlyModelViewSet):
+class BaseReadOnlyViewset(CacheResponseMixin, viewsets.ReadOnlyModelViewSet):
     """Базовый вьюсет для чтения."""
 
     permission_classes = (AllowAny,)
