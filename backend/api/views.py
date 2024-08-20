@@ -1,7 +1,5 @@
 """Контроллеры."""
 
-# from reportlab.lib.pagesizes import letter  # type: ignore
-# from reportlab.pdfgen import canvas  # type: ignore
 from rest_framework.permissions import (AllowAny,  # type: ignore
                                         IsAuthenticated)
 from rest_framework import filters, viewsets  # type: ignore
@@ -13,7 +11,6 @@ from django.conf import settings  # type: ignore
 from rest_framework.views import APIView  # type: ignore
 from django.http import FileResponse  # type: ignore
 from django_filters.rest_framework import DjangoFilterBackend  # type: ignore
-from django.views.decorators.cache import cache_page  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient
 from .serializers import (TagSerializer, RecipeWriteSerializer,
@@ -64,17 +61,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = RecipeFilter
     queryset = Recipe.objects.all()
-
-    # def get_queryset(self):
-    #     """Получение списка рецептов."""
-    #     queryset = Recipe.objects.all()
-    #     query = self.request.GET.get('author')
-    #     if query:
-    #         queryset = queryset.filter(author=query)
-    #     query = self.request.GET.get('limit')
-    #     if query:
-    #         queryset = queryset[:int(query)]
-    #     return queryset
 
     def get_permissions(self):
         """Разрешения."""
@@ -181,13 +167,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         txt = self.convert_to_txt(recipes)
         return FileResponse(txt, as_attachment=True,
                             filename='Список покупок.txt')
-        # pdf_data = io.BytesIO()
-        # pdf_in_memory = canvas.Canvas(pdf_data, pagesize=letter)
-        # pdf_in_memory.drawString(100, 100, txt)
-        # pdf_in_memory.save()
-        # return FileResponse(pdf_data, as_attachment=True,
-        #                     filename='Список покупок.pdf',
-        #                     content_type='application/pdf')
 
     @action(
         detail=True,
@@ -288,7 +267,6 @@ class UserViewSet(viewsets.ModelViewSet):
         user = request.user
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # serializer.save()
         password = serializer.validated_data['new_password']
         user.set_password(password)
         user.save()
@@ -360,49 +338,6 @@ class UserViewSet(viewsets.ModelViewSet):
         if query:
             queryset = queryset[:int(query)]
         return queryset
-
-
-# class SubscriptionView(APIView):
-#     """Вью подписок."""
-
-#     serializer_class = SubscriptionSerializer
-
-#     def get(self, request):
-#         """Список подписок."""
-#         serializer = self.get_serializer(self.get_queryset(),
-#                                          many=True,
-#                                          context={'request': request})
-#         return Response(serializer.data)
-
-#     def get_permissions(self):
-#         """Разрешения."""
-#         if self.action == 'list':
-#             self.permission_classes = (AllowAny,)
-#         else:
-#             self.permission_classes = (ForbiddenPermission,)
-#         return super().get_permissions()
-
-#     def get_queryset(self):
-#         """Подписки."""
-#         user = self.request.user
-#         queryset = user.subscriptions.all()
-#         query = self.request.GET.get('limit')
-#         if query:
-#             queryset = queryset[:int(query)]
-#         return queryset
-
-
-# class ShortLinkViewset(viewsets.ViewSet):
-#     """Вьюсет коротких ссылок."""
-
-#     permission_classes = (AllowAny,)
-
-#     def retrieve(self, request, pk=None):
-#         """Получение рецепта по короткой ссылке."""
-#         recipe_id = int(pk, 23)
-#         recipe = get_object_or_404(Recipe, id=recipe_id)
-#         serializer = RecipeReadSerializer(recipe)
-#         return Response(serializer.data)
 
 
 class ShortLinkView(APIView):

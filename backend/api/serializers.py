@@ -5,23 +5,12 @@ from collections import deque
 
 from rest_framework import serializers  # type: ignore
 from django.core.files.base import ContentFile  # type: ignore
-from django.core.exceptions import ValidationError  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
 from django.shortcuts import get_object_or_404  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient, RecipeIngredient
 
 User = get_user_model()
-
-
-# def convert_to_image(data):
-#     """Преобразование в картинку."""
-#     if isinstance(data, str) and data.startswith('data:image'):
-#         format, imgstr = data.split(';base64,')
-#         ext = format.split('/')[-1]
-#         data = base64.b64decode(imgstr)
-#         return data, ext
-#     raise ValidationError('Неверный формат изображения.')
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -67,35 +56,6 @@ class IngredientWriteSerializer(serializers.Serializer):
 
     id = serializers.IntegerField(min_value=1)
     amount = serializers.IntegerField(min_value=1)
-
-
-# class RecipeIngredientSerializer(serializers.ModelSerializer):
-#     """Сериализатор ингредиентов в рецепте."""
-
-#     id = serializers.SerializerMethodField()
-#     name = serializers.SerializerMethodField()
-#     measurement_unit = serializers.SerializerMethodField()
-
-#     class Meta:
-#         """Настройки сериализатора."""
-
-#         model = RecipeIngredient
-#         fields = ('id',
-#                   'name',
-#                   'measurement_unit',
-#                   'amount')
-
-#     def get_id(self, data):
-#         """Поле, id ингредиента."""
-#         return data.ingredient.id
-
-#     def get_name(self, data):
-#         """Поле, название ингредиента."""
-#         return data.ingredient.name
-
-#     def get_measurement_unit(self, data):
-#         """Поле, единица измерения ингредиента."""
-#         return data.ingredient.measurement_unit
 
 
 class UserReadSerializer(serializers.ModelSerializer):
@@ -167,9 +127,6 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
     def get_author(self, data):
         """Поле, автор рецепта."""
-        # if isinstance(self.instance, list):
-        #     return [UserReadSerializer(recipe.author).data
-        #             for recipe in self.instance]
         return UserReadSerializer(data.author,
                                   context=self.context).data
 
@@ -266,8 +223,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 amount=amount,
                 recipe=recipe,
             )
-        # data, ext = convert_to_image(image.data)
-        # recipe.image.save(image_name, ContentFile(data, name=image_name))
         recipe.image = image
         recipe.save()
         return recipe
@@ -280,10 +235,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         )
         instance.text = validated_data.get('text', instance.text)
         instance.image = validated_data.get('image', instance.image)
-        # if image:
-        #     data, ext = convert_to_image(image)
-        #     image_name = f'recipes/{instance.id}.{ext}'
-        #     instance.image.save(image_name, ContentFile(data, name=image_name))
         ingredients_data = validated_data.get('ingredients')
         if not ingredients_data:
             raise serializers.ValidationError(
@@ -392,12 +343,6 @@ class PasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {'current_password': ['Неверный пароль.']})
         return attrs
-
-    # def save(self):
-    #     """Смена пароля."""
-    #     user = self.context.get('request').user
-    #     user.set_password(self.validated_data['new_password'])
-    #     user.save()
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
@@ -511,9 +456,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_recipes_count(self, user):
         """Получение количества рецептов пользователя."""
-        # view = self.context.get('view')
-        # if not view:
-        #     raise serializers.ValidationError('Нет view.')
         return user.recipes.count()
 
 
@@ -629,9 +571,6 @@ class AvatarSerializer(serializers.ModelSerializer):
         if not avatar:
             raise serializers.ValidationError(
                 {'avatar': ['Нет данных аватара.']})
-        # data, ext = convert_to_image(avatar)
-        # image_name = f'users/{user.id}.{ext}'
-        # user.avatar.save(image_name, ContentFile(data, name=image_name))
         user.avatar = avatar
         user.save()
         return user

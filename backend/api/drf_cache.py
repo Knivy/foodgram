@@ -1,3 +1,5 @@
+"""Redis."""
+
 from django.core.cache import cache  # type: ignore
 from django.conf import settings  # type: ignore
 

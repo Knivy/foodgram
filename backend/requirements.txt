@@ -9,4 +9,4 @@ pytest-pythonpath==0.7.3
 django-redis==5.4.0
 PyYAML==6.0
 django-filter==23.1
-# reportlab==3.5.57
+python-dotenv==0.20.0

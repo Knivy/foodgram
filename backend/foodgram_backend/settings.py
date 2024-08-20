@@ -2,8 +2,10 @@
 import os
 import json
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv()
 
 #SECRET_KEY = os.getenv('SECRET_KEY')
 SECRET_KEY = 'django-insecure-3)8yfli+6&q@aep$)_pr+d+_rzi&i)8iai*0*^6z(^gzb&)r5&'
