@@ -1,6 +1,7 @@
 """Модели."""
 
 import re
+import os
 
 from django.db import models  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
@@ -8,14 +9,13 @@ from django.core.validators import (MaxValueValidator,  # type: ignore
                                     MaxLengthValidator,
                                     MinValueValidator)
 from django.core.exceptions import ValidationError  # type: ignore
-from django.conf import settings  # type: ignore
 
 from .constants import (MAX_NAME_LENGTH, MAX_SLUG_LENGTH, MAX_UNIT_LENGTH,
                         MAX_INGREDIENT_AMOUNT, MIN_INGREDIENT_AMOUNT,
                         MAX_COOKING_TIME, MIN_COOKING_TIME,
                         MAX_TAG_NAME_LENGTH, MAX_INGREDIENT_NAME_LENGTH)
 
-settings.configure()
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'foodgram_backend.settings')
 
 
 def validate_slug(slug):
