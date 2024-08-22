@@ -347,8 +347,6 @@ class ShortLinkView(APIView):
 
     def get(self, request, short_link):
         """Получение рецепта по короткой ссылке."""
-        # recipe_id = int(str(pk), 23)
-        # return redirect(f'{settings.CURRENT_HOST}/api/recipes/{recipe_id}/')
         recipe = get_object_or_404(Recipe, short_url=short_link)
         serializer = RecipeReadSerializer(recipe,
                                           context={'request': request})

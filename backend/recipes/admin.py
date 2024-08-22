@@ -18,8 +18,20 @@ admin.site.index_title = 'Административная панель'
 class RecipeAdmin(admin.ModelAdmin):
     """Регистрация рецептов."""
 
-    list_display = ('name', 'author', 'favorite_count')
-    fields = ('name', 'author', 'image', 'text', 'tags')
+    list_display = ('name',
+                    'author',
+                    'favorite_count',
+                    'image',
+                    'text',
+                    'cooking_time',
+                    'short_url')
+    fields = ('name',
+              'author',
+              'image',
+              'text',
+              'tags',
+              'cooking_time',
+              'short_url')
     list_filter = ('tags',)
     search_fields = ('name', 'author__username')
     verbose_name = 'Рецепт'
@@ -48,8 +60,8 @@ class IngredientAdmin(admin.ModelAdmin):
 class TagAdmin(admin.ModelAdmin):
     """Регистрация тегов."""
 
-    list_display = ('name',)
-    fields = ('name',)
+    list_display = ('name', 'slug')
+    fields = ('name', 'slug')
     search_fields = ('name',)
     verbose_name = 'Тег'
     verbose_name_plural = 'Теги'

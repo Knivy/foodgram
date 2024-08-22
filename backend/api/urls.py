@@ -14,8 +14,6 @@ router_v1.register('ingredients', IngredientViewSet, basename='ingredients')
 router_v1.register('users', UserViewSet, basename='users')
 
 urlpatterns: list[path] = [
-    # path('users/subscriptions', SubscriptionView.as_view(),
-    #      name='subscriptions'),
     path('', include(router_v1.urls)),
     path('s/<int:short_link>', ShortLinkView.as_view(), name='shortlink'),
     path('auth/', include('djoser.urls')),

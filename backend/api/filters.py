@@ -1,7 +1,5 @@
 """Фильтры."""
 
-from enum import IntEnum
-
 from django_filters import rest_framework as filters  # type: ignore
 
 from recipes.models import Recipe, Tag
@@ -66,17 +64,10 @@ class RecipeFilter(filters.FilterSet):
         query = request.GET.get('author')
         if query:
             queryset = queryset.filter(author__id=int(query))
-        # tags = request.GET.getlist('tags')
-        # if tags:
-        #     for tag in tags:
-        #         queryset = queryset.filter(tags__in__exact=tag)
         tags = request.GET.get('tags')
         if tags:
             tags = tags.split(',')
             queryset = queryset.filter(tags__slug__in=tags).distinct()
-            # for tag_slug in tags.split(','):
-            #     tag = get_object_or_404(Tag, slug=tag_slug)
-            #     queryset = queryset.filter(tags__in=tag)
         query = self.request.GET.get('limit')
         if query:
             queryset = queryset[:int(query)]
