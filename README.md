@@ -59,11 +59,6 @@ docker compose up --build
         "slug": "drink"
     },
     {
-        "id": 1,
-        "name": "суп",
-        "slug": "soup"
-    },
-    {
         "id": 3,
         "name": "хлеб",
         "slug": "bread"
