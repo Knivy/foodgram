@@ -3,9 +3,15 @@
 import json
 import os
 
-from recipes.models import Ingredient, Tag  # type: ignore
+import django  # type: ignore
+from django.apps import apps  # type: ignore
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'foodgram_backend.settings')
+django.setup()
+if not apps.apps_ready():
+    django.setup()
+
+from recipes.models import Ingredient, Tag  # ignore
 
 with open('data/ingredients.json', 'r', encoding='utf-8') as file:
     ingredients = json.load(file)

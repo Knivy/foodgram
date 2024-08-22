@@ -23,6 +23,8 @@ from .permissions import AuthorOnly, ForbiddenPermission
 from .filters import RecipeFilter
 from .drf_cache import CacheResponseMixin
 
+import json
+
 
 User = get_user_model()
 
@@ -351,3 +353,28 @@ class ShortLinkView(APIView):
         serializer = RecipeReadSerializer(recipe,
                                           context={'request': request})
         return Response(serializer.data)
+
+
+class LoadDataView(APIView):
+    """Класс загрузки данных."""
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        """Загрузка данных."""
+        with open('data/ingredients.json', 'r', encoding='utf-8') as file:
+            ingredients = json.load(file)
+            for ingredient in ingredients:
+                Ingredient.objects.get_or_create(
+                    name=ingredient['name'],
+                    measurement_unit=ingredient['measurement_unit']
+                )
+
+        with open('data/tags.json', 'r', encoding='utf-8') as file:
+            tags = json.load(file)
+            for tag in tags:
+                Tag.objects.get_or_create(
+                    name=tag['name'],
+                    slug=tag['slug']
+                )
+        return Response(status=204)
