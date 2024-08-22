@@ -46,7 +46,7 @@ class MaxLengthPasswordValidator:
         if len(password) > self.max_length:
             raise ValidationError(
                 f'Длина пароля не должна превышать {self.max_length} символов.'
-                )
+            )
 
     def get_help_text(self):
         """Справка."""
