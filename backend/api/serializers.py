@@ -484,7 +484,7 @@ class SubscriptionCreateSerializer(serializers.Serializer):
                 'Пользователь уже подписан.')
         subscription_user = get_object_or_404(User, id=subscription_user_id)
         data_to_validate['user'] = user
-        data_to_validate['subscription_user'] = subscription_user    
+        data_to_validate['subscription_user'] = subscription_user
         return data_to_validate
 
     def save(self):
