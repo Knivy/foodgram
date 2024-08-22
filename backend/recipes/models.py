@@ -9,6 +9,8 @@ from django.core.validators import (MaxValueValidator,  # type: ignore
                                     MaxLengthValidator,
                                     MinValueValidator)
 from django.core.exceptions import ValidationError  # type: ignore
+import django  # type: ignore
+from django.apps import apps  # type: ignore
 
 from .constants import (MAX_NAME_LENGTH, MAX_SLUG_LENGTH, MAX_UNIT_LENGTH,
                         MAX_INGREDIENT_AMOUNT, MIN_INGREDIENT_AMOUNT,
@@ -16,6 +18,9 @@ from .constants import (MAX_NAME_LENGTH, MAX_SLUG_LENGTH, MAX_UNIT_LENGTH,
                         MAX_TAG_NAME_LENGTH, MAX_INGREDIENT_NAME_LENGTH)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'foodgram_backend.settings')
+django.setup()
+if not apps.apps_ready():
+    django.setup()
 
 
 def validate_slug(slug):
