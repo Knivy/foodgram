@@ -128,7 +128,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CACHE_TIMEOUT: int = 60 * 5  # Cache timeout in seconds
+CACHE_TIMEOUT: int = 5  # Cache timeout in seconds
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
