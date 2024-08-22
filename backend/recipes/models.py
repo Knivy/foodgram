@@ -14,8 +14,6 @@ from .constants import (MAX_NAME_LENGTH, MAX_SLUG_LENGTH, MAX_UNIT_LENGTH,
                         MAX_COOKING_TIME, MIN_COOKING_TIME,
                         MAX_TAG_NAME_LENGTH, MAX_INGREDIENT_NAME_LENGTH)
 
-User = get_user_model()
-
 
 def validate_slug(slug):
     """Проверка слага."""
@@ -76,6 +74,9 @@ class Tag(models.Model):
     def __str__(self):
         """Строковое представление."""
         return self.name
+
+
+User = get_user_model()
 
 
 class Recipe(models.Model):
