@@ -4,6 +4,10 @@ Foodgram
 
 Август 2024.
 
+![Workflow badge!](https://github.com/Knivy/foodgram/actions/workflows/main.yml/badge.svg)
+
+Адрес сервера: https://albinagiliazova.chickenkiller.com (158.160.91.98) 
+
 ### Технологии
 
 Python, Django, Django Rest Framework, Pytest, Flake8, JWT, redoc
