@@ -1,8 +1,11 @@
 """Загрузка данных в базу."""
 
 import json
+import os
 
 from recipes.models import Ingredient, Tag  # type: ignore
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'foodgram_backend.settings')
 
 with open('data/ingredients.json', 'r', encoding='utf-8') as file:
     ingredients = json.load(file)
