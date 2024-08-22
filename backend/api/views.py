@@ -362,13 +362,13 @@ class LoadDataView(APIView):
 
     def get(self, request):
         """Загрузка данных."""
-        with open('data/ingredients.json', 'r', encoding='utf-8') as file:
-            ingredients = json.load(file)
-            for ingredient in ingredients:
-                Ingredient.objects.get_or_create(
-                    name=ingredient['name'],
-                    measurement_unit=ingredient['measurement_unit']
-                )
+        # with open('data/ingredients.json', 'r', encoding='utf-8') as file:
+        #     ingredients = json.load(file)
+        #     for ingredient in ingredients:
+        #         Ingredient.objects.get_or_create(
+        #             name=ingredient['name'],
+        #             measurement_unit=ingredient['measurement_unit']
+        #         )
 
         with open('data/tags.json', 'r', encoding='utf-8') as file:
             tags = json.load(file)
