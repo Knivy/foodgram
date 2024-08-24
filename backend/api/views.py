@@ -1,5 +1,7 @@
 """Контроллеры."""
 
+import json
+
 from rest_framework.permissions import (AllowAny,  # type: ignore
                                         IsAuthenticated)
 from rest_framework import filters, viewsets  # type: ignore
@@ -11,6 +13,7 @@ from django.conf import settings  # type: ignore
 from rest_framework.views import APIView  # type: ignore
 from django.http import FileResponse  # type: ignore
 from django_filters.rest_framework import DjangoFilterBackend  # type: ignore
+from django.db.models import Case, When, BooleanField, Value  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient
 from .serializers import (TagSerializer, RecipeWriteSerializer,
@@ -22,9 +25,6 @@ from .serializers import (TagSerializer, RecipeWriteSerializer,
 from .permissions import AuthorOnly, ForbiddenPermission
 from .filters import RecipeFilter
 from .drf_cache import CacheResponseMixin
-
-import json
-
 
 User = get_user_model()
 
@@ -90,6 +90,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.action == 'shopping_cart':
             return ShoppingCreateSerializer
         return RecipeWriteSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not user.is_authenticated:
+            return queryset.annotate(
+                is_favorited=Value(False),
+                is_in_shopping_cart=Value(False),
+            )
+        return queryset.annotate(
+            is_favorited=Case(
+                When(favorites__in=(user,), then=True),
+                default=False,
+                output_field=BooleanField()
+            ),
+            is_in_shopping_cart=Case(
+                When(shopping_cart__in=(user,), then=True),
+                default=False,
+                output_field=BooleanField()
+            ),
+        )
 
     @action(
         detail=True,

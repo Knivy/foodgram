@@ -12,19 +12,20 @@ class RecipeFilter(filters.FilterSet):
     Нечувствительно к регистру.
     """
 
-    author = filters.NumberFilter(field_name='author__id',
-                                  lookup_expr='exact')
     tags = filters.ModelMultipleChoiceFilter(
         field_name='tags__slug',
         to_field_name='slug',
         queryset=Tag.objects.all(),
     )
+    is_favorited = filters.BooleanFilter(method='filter_is_favorited')
+    is_in_shopping_cart = filters.BooleanFilter(
+        method='filter_is_in_shopping_cart')
 
     class Meta:
         """Настройки фильтра."""
 
         model = Recipe
-        fields = ['tags']
+        fields = ('tags', 'author', 'is_favorited', 'is_in_shopping_cart')
 
     def get_filterset_config(self):
         """Для доступа к запросу."""
@@ -32,35 +33,27 @@ class RecipeFilter(filters.FilterSet):
         config['request'] = self.request
         return config
 
+    def filter_is_favorited(self, queryset, name, value):
+        """Фильтрация по флагу избранное."""
+        user = self.request.user
+        if not user.is_authenticated:
+            return queryset.none()
+        if not value:
+            return queryset.exclude(favorites__in=(user,))
+        return queryset.filter(favorites__in=(user, ))
+
+    def filter_is_in_shopping_cart(self, queryset, name, value):
+        """Фильтрация по флагу списка покупок."""
+        user = self.request.user
+        if not user.is_authenticated:
+            return queryset.none()
+        if not value:
+            return queryset.exclude(shopping_cart__in=(user,))
+        return queryset.filter(shopping_cart__in=(user,))
+
     def filter_queryset(self, queryset):
         """Фильтрация по флагам."""
         request = self.request
-        user = request.user
-        auth = user.is_authenticated
-        query = request.GET.get('is_favorited')
-        if query:
-            if query == '1':
-                if auth:
-                    queryset = queryset.filter(favorites__in=(user,))
-                else:
-                    return queryset.none()
-            elif query == '0':
-                if auth:
-                    queryset = queryset.exclude(favorites__in=(user,))
-                else:
-                    return queryset.none()
-        query = request.GET.get('is_in_shopping_cart')
-        if query:
-            if query == '1':
-                if auth:
-                    queryset = queryset.filter(shopping_cart__in=(user,))
-                else:
-                    return queryset.none()
-            elif query == '0':
-                if auth:
-                    queryset = queryset.exclude(shopping_cart__in=(user,))
-                else:
-                    return queryset.none()
         query = request.GET.get('author')
         if query:
             queryset = queryset.filter(author__id=int(query))
@@ -68,6 +61,7 @@ class RecipeFilter(filters.FilterSet):
         if tags:
             tags = tags.split(',')
             queryset = queryset.filter(tags__slug__in=tags).distinct()
+        queryset = super().filter_queryset(queryset)
         query = self.request.GET.get('limit')
         if query:
             queryset = queryset[:int(query)]

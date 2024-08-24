@@ -7,6 +7,7 @@ from rest_framework import serializers  # type: ignore
 from django.core.files.base import ContentFile  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
 from django.shortcuts import get_object_or_404  # type: ignore
+from django.db.models import Case, When, BooleanField, Value  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient, RecipeIngredient
 
@@ -28,15 +29,16 @@ class TagSerializer(serializers.ModelSerializer):
 class Base64ImageField(serializers.ImageField):
     """Поле для картинки."""
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, image_data):
         """Преобразование в картинку."""
-        if isinstance(data, str) and data.startswith('data:image'):
-            format, imgstr = data.split(';base64,')
+        if isinstance(image_data, str) and image_data.startswith('data:image'):
+            format, imgstr = image_data.split(';base64,')
             ext = format.split('/')[-1]
 
-            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+            image_data = ContentFile(base64.b64decode(imgstr),
+                                     name=f'temp.{ext}')
 
-        return super().to_internal_value(data)
+        return super().to_internal_value(image_data)
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -46,9 +48,7 @@ class IngredientSerializer(serializers.ModelSerializer):
         """Настройки сериализатора."""
 
         model = Ingredient
-        fields = ('id',
-                  'name',
-                  'measurement_unit')
+        fields = '__all__'
 
 
 class IngredientWriteSerializer(serializers.Serializer):
@@ -91,12 +91,13 @@ class UserReadSerializer(serializers.ModelSerializer):
 class RecipeReadSerializer(serializers.ModelSerializer):
     """Сериализатор рецептов на чтение."""
 
-    image = Base64ImageField()
     tags = TagSerializer(many=True)
     ingredients = IngredientSerializer(many=True)
     author = serializers.SerializerMethodField()
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
+    # is_favorited = serializers.SerializerMethodField()
+    # is_in_shopping_cart = serializers.SerializerMethodField()
+    is_favorited = serializers.BooleanField()
+    is_in_shopping_cart = serializers.BooleanField()
 
     class Meta:
         """Настройки сериализатора."""
@@ -114,32 +115,65 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                   'cooking_time',
                   )
 
-    def get_is_favorited(self, data):
-        """Поле, добавлен ли рецепт в избранное."""
-        request = self.context.get('request')
-        if not request:
-            raise serializers.ValidationError('2. Нет данных запроса.')
-        user = request.user
-        if not user.is_authenticated:
-            return False
-        return (user.favorites.
-                filter(id=data.id).exists())
+    # def get_queryset(self):
+    #     """Получение queryset."""
+    #     request = self.context.get('request')
+    #     if not request:
+    #         raise serializers.ValidationError('12. Нет данных запроса.')
+    #     user = request.user
+    #     queryset = super().get_queryset()
+    #     if not user.is_authenticated:
+    #         return queryset.annotate(
+    #             is_favorited=False,
+    #             is_in_shopping_cart=False,
+    #         )
+    #     return queryset.annotate(
+    #         is_favorited=Case(
+    #             When(favorites__in=(user,), then=True),
+    #             default=False,
+    #             output_field=BooleanField()
+    #         ),
+    #         is_in_shopping_cart=Case(
+    #             When(shopping_cart__in=(user,), then=True),
+    #             default=False,
+    #             output_field=BooleanField()
+    #         ),
+    #     )
 
-    def get_author(self, data):
+    def get_is_favorited(self, recipe):
+        """Поле, добавлен ли рецепт в избранное."""
+        return recipe.is_favorited
+
+    def get_is_in_shopping_cart(self, recipe):
+        """Поле, добавлен ли рецепт в список покупок."""
+        return recipe.is_in_shopping_cart
+
+    def get_author(self, recipe):
         """Поле, автор рецепта."""
-        return UserReadSerializer(data.author,
+        return UserReadSerializer(recipe.author,
                                   context=self.context).data
 
-    def get_is_in_shopping_cart(self, data):
-        """Поле, добавлен ли рецепт в список покупок."""
-        request = self.context.get('request')
-        if not request:
-            raise serializers.ValidationError('3. Нет данных запроса.')
-        user = request.user
-        if not user.is_authenticated:
-            return False
-        return (user.shopping_cart.
-                filter(id=data.id).exists())
+    # def get_is_favorited(self, data):
+    #     """Поле, добавлен ли рецепт в избранное."""
+    #     request = self.context.get('request')
+    #     if not request:
+    #         raise serializers.ValidationError('2. Нет данных запроса.')
+    #     user = request.user
+    #     if not user.is_authenticated:
+    #         return False
+    #     return (user.favorites.
+    #             filter(id=data.id).exists())    
+
+    # def get_is_in_shopping_cart(self, data):
+    #     """Поле, добавлен ли рецепт в список покупок."""
+    #     request = self.context.get('request')
+    #     if not request:
+    #         raise serializers.ValidationError('3. Нет данных запроса.')
+    #     user = request.user
+    #     if not user.is_authenticated:
+    #         return False
+    #     return (user.shopping_cart.
+    #             filter(id=data.id).exists())
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
@@ -287,6 +321,27 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         """Представление рецепта."""
+        request = self.context.get('request')
+        if not request:
+            raise serializers.ValidationError('13. Нет данных запроса.')
+        if not request.user.is_authenticated:
+            instance = instance.annotate(
+                is_favorited=Value(False),
+                is_in_shopping_cart=Value(False),
+            )
+        else:
+            instance = instance.annotate(
+                is_favorited=Case(
+                    When(favorites__in=(request.user,), then=True),
+                    default=False,
+                    output_field=BooleanField()
+                ),
+                is_in_shopping_cart=Case(
+                    When(shopping_cart__in=(request.user,), then=True),
+                    default=False,
+                    output_field=BooleanField()
+                ),
+            )
         return RecipeReadSerializer(instance, context=self.context).data
 
 
@@ -439,6 +494,24 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         recipes_limit = request.GET.get('recipes_limit')
         if recipes_limit:
             recipes = recipes[:int(recipes_limit)]
+        if not request.user.is_authenticated:
+            recipes = recipes.annotate(
+                is_favorited=Value(False),
+                is_in_shopping_cart=Value(False),
+            )
+        else:
+            recipes = recipes.annotate(
+                is_favorited=Case(
+                    When(favorites__in=(request.user,), then=True),
+                    default=False,
+                    output_field=BooleanField()
+                ),
+                is_in_shopping_cart=Case(
+                    When(shopping_cart__in=(request.user,), then=True),
+                    default=False,
+                    output_field=BooleanField()
+                ),
+            )
         return RecipeReadSerializer(recipes,
                                     many=True,
                                     context=self.context).data

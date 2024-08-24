@@ -8,6 +8,7 @@ from django.core.validators import (MaxValueValidator,  # type: ignore
                                     MaxLengthValidator,
                                     MinValueValidator)
 from django.core.exceptions import ValidationError  # type: ignore
+# from django.db.models import Case, When, BooleanField  # type: ignore
 
 from .constants import (MAX_NAME_LENGTH, MAX_SLUG_LENGTH, MAX_UNIT_LENGTH,
                         MAX_INGREDIENT_AMOUNT, MIN_INGREDIENT_AMOUNT,
@@ -152,3 +153,27 @@ class RecipeIngredient(models.Model):
         """Строковое представление."""
         return (f'{self.ingredient.name}: {self.amount} '
                 f'{self.ingredient.measurement_unit}')
+
+
+# class RecipeFavoriteQuerySet(models.QuerySet):
+#     """Дополнительные поля."""
+
+#     def is_favorited(self, user):
+#         """Избранное."""
+#         return self.annotate(
+#             is_favorited=Case(
+#                 When(favorites__in=(user,), then=True),
+#                 default=False,
+#                 output_field=BooleanField()
+#             )
+#         )
+
+#     def is_in_shopping_cart(self, user):
+#         """Список покупок."""
+#         return self.annotate(
+#             is_in_shopping_cart=Case(
+#                 When(shopping_cart__in=(user,), then=True),
+#                 default=False,
+#                 output_field=BooleanField()
+#             )
+#         )
