@@ -24,7 +24,7 @@ Python, Django, Django Rest Framework, Pytest, Flake8, JWT, redoc
 
 Ревьюер:
 
-Денис Унтевский.
+Денис Унтевский (https://deni.su/care/).
 
 ### Как запустить проект
 

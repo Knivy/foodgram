@@ -4,16 +4,18 @@ import json
 
 from rest_framework.permissions import (AllowAny,  # type: ignore
                                         IsAuthenticated)
-from rest_framework import filters, viewsets  # type: ignore
+from rest_framework import filters, viewsets, status  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
 from rest_framework.decorators import action  # type: ignore
 from rest_framework.response import Response  # type: ignore
 from django.shortcuts import get_object_or_404  # type: ignore
 from django.conf import settings  # type: ignore
 from rest_framework.views import APIView  # type: ignore
-from django.http import FileResponse  # type: ignore
+from django.http import FileResponse, HttpResponse  # type: ignore
 from django_filters.rest_framework import DjangoFilterBackend  # type: ignore
-from django.db.models import Case, When, BooleanField, Value  # type: ignore
+from django.db.models import (Case, When, BooleanField,  # type: ignore
+                              Value, Sum)
+from rest_framework.exceptions import NotFound  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient
 from .serializers import (TagSerializer, RecipeWriteSerializer,
@@ -50,7 +52,7 @@ class IngredientViewSet(BaseReadOnlyViewset):
 
     def get_queryset(self):
         """Поиск по вхождению в начало строки."""
-        query = self.request.GET.get('name')
+        query = self.request.query_params.get('name')
         if query:
             return Ingredient.objects.filter(name__istartswith=query)
         return Ingredient.objects.all()
@@ -134,48 +136,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = get_object_or_404(Recipe, id=pk)
         if user.favorites.filter(id=pk).exists():
             user.favorites.remove(recipe)
-            return Response(status=204)
-        return Response(status=404)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
     def convert_to_txt(self, recipes):
         """Конвертация в TXT."""
         if not recipes:
             return 'Нет рецептов в списке покупок.'
         ingredients = {}
-        for recipe in recipes:
-            for recipe_ingredient in recipe.ingredients.through.objects.all():
-                ingredient = recipe_ingredient.ingredient
-                name = ingredient.name
-                amount = recipe_ingredient.amount
-                unit = ingredient.measurement_unit
-                if name not in ingredients:
-                    ingredients[name] = {}
-                    ingredients[name][unit] = amount
-                else:
-                    if unit not in ingredients[name]:
-                        ingredients[name][unit] = amount
-                    elif unit == 'г' and 'кг' in ingredients[name]:
-                        ingredients[name]['кг'] += amount / 1000
-                    elif unit == 'кг' and 'г' in ingredients[name]:
-                        ingredients[name]['г'] += amount * 1000
-                    elif unit == 'л' and 'мл' in ingredients[name]:
-                        ingredients[name]['мл'] += amount * 1000
-                    elif unit == 'мл' and 'л' in ingredients[name]:
-                        ingredients[name]['л'] += amount / 1000
-                    else:
-                        ingredients[name][unit] += amount
-        if not ingredients:
+        ingredients = recipes.values(
+            'ingredients__ingredient__name',
+            'ingredients__ingredient__measurement_unit',
+            'ingredients__amount').annotate(
+            total_amount=Sum('ingredients__amount'),
+            ).values(
+                'ingredients__ingredient__name',
+                'ingredients__ingredient__measurement_unit',
+                'total_amount').order_by('ingredients__ingredient__name')
+        if not ingredients.exists():
             return 'Нет ингредиентов для покупки.'
-        ingredients = dict(sorted(ingredients.items()))
-        txt = ['Список покупок.\n\n']
-        for name, units in ingredients.items():
-            if len(units) == 1:
-                unit, amount = next(iter(units.items()))
-                txt.append(f'{name} ({unit}) — {amount}\n')
-            else:
-                txt.append(f'{name}:\n')
-                for unit, amount in units.items():
-                    txt.append(f'  {unit} — {amount}\n')
+        txt = ['Список покупок.\n\n']  # Дальше список изменяем.
+        for ingredient in ingredients:
+            name = ingredient.get('ingredients__ingredient__name')
+            unit = ingredient.get('ingredients__ingredient__measurement_unit')
+            amount = ingredient.get('total_amount')
+            txt.append(f'{name}:  {unit} — {amount}\n')
         return ''.join(txt)
 
     @action(
@@ -188,8 +173,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
         recipes = user.shopping_cart.all()
         txt = self.convert_to_txt(recipes)
-        return FileResponse(txt, as_attachment=True,
-                            filename='Список покупок.txt')
+        response = HttpResponse(txt, content_type='text/plain; charset=UTF-8')
+        response['Content-Disposition'] = ('attachment; '
+                                           'filename="shopping-list.txt"')
+        # return FileResponse(txt, as_attachment=True,
+        #                     filename='Список покупок.txt')
+        return response
 
     @action(
         detail=True,
@@ -213,8 +202,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = get_object_or_404(Recipe, id=pk)
         if user.shopping_cart.filter(id=pk).exists():
             user.shopping_cart.remove(recipe)
-            return Response(status=204)
-        return Response(status=404)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        raise NotFound('Рецепт не найден в списке покупок.')
 
     @action(
         detail=True,
@@ -225,10 +214,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def get_link(self, request, pk):
         """Получение короткой ссылки."""
-        recipe = get_object_or_404(Recipe, id=pk)
+        recipe = self.get_object(pk)
         return Response({
             'short-link':
-            f'{settings.CURRENT_HOST}/api/s/{recipe.short_url}',
+            (f'{settings.CURRENT_HOST}:{settings.CURRENT_PORT}'
+             f'/api/s/{recipe.short_url}'),
         })
 
 
@@ -267,7 +257,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user.avatar.delete()
         user.avatar = settings.DEFAULT_AVATAR
         user.save()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,
@@ -293,7 +283,7 @@ class UserViewSet(viewsets.ModelViewSet):
         password = serializer.validated_data['new_password']
         user.set_password(password)
         user.save()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_serializer_class(self):
         """Выбор сериализатора."""
@@ -333,8 +323,8 @@ class UserViewSet(viewsets.ModelViewSet):
         subscription = get_object_or_404(User, id=pk)
         if user.subscriptions.filter(id=pk).exists():
             user.subscriptions.remove(subscription)
-            return Response(status=204)
-        return Response(status=404)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        raise NotFound('Пользователь не найден в подписках.')
 
     def get_permissions(self):
         if self.action in {'partial_update', 'destroy'}:
@@ -398,4 +388,4 @@ class LoadDataView(APIView):
                     name=tag['name'],
                     slug=tag['slug']
                 )
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)

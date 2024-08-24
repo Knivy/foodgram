@@ -7,8 +7,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 
-#SECRET_KEY = os.getenv('SECRET_KEY')
-SECRET_KEY = 'django-insecure-3)8yfli+6&q@aep$)_pr+d+_rzi&i)8iai*0*^6z(^gzb&)r5&'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'False').lower() != 'false'
 
@@ -17,6 +16,7 @@ if ALLOWED_HOSTS and isinstance(ALLOWED_HOSTS, str) and '[' in ALLOWED_HOSTS:
     ALLOWED_HOSTS = json.loads(ALLOWED_HOSTS)
 
 CURRENT_HOST = os.getenv('CURRENT_HOST', 'localhost')
+CURRENT_PORT = os.getenv('CURRENT_PORT', '9000')
 
 INSTALLED_APPS = [
     'django.contrib.admin',

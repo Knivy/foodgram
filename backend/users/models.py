@@ -60,6 +60,7 @@ class UserWithSubscriptions(AbstractUser):
         related_name='subscriptions',
         verbose_name='Подписки',
         blank=True,
+        through='Subscription',
     )
     avatar = models.ImageField(
         verbose_name='Аватар',
@@ -79,12 +80,14 @@ class UserWithSubscriptions(AbstractUser):
         related_name='favorites',
         verbose_name='Избранное',
         blank=True,
+        through='Favorite',
     )
     shopping_cart = models.ManyToManyField(
         'recipes.Recipe',
         related_name='shopping_cart',
         verbose_name='Список покупок',
         blank=True,
+        through='ShoppingCart',
     )
 
     class Meta:
@@ -103,3 +106,96 @@ class UserWithSubscriptions(AbstractUser):
         """Является ли пользователь суперпользователем или администратором."""
         self.refresh_from_db()
         return self.is_superuser or self.role == Role.ADMIN
+
+
+class Favorite(models.Model):
+    """Модель избранного."""
+
+    user = models.ForeignKey(
+        UserWithSubscriptions,
+        on_delete=models.CASCADE,
+        related_name='favorite',
+        verbose_name='Пользователь',
+    )
+    recipe = models.ForeignKey(
+        'recipes.Recipe',
+        on_delete=models.CASCADE,
+        related_name='favorite',
+        verbose_name='Рецепт',
+    )
+
+    class Meta:
+        """Настройки модели."""
+
+        constraints = (
+            models.UniqueConstraint(fields=('user', 'recipe'),
+                                    name='unique_favorite'),
+        )
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранное'
+
+    def __str__(self):
+        """Строковое представление."""
+        return f'Избранное: {self.user.username} - {self.recipe.name}'
+
+
+class ShoppingCart(models.Model):
+    """Модель списка покупок."""
+
+    user = models.ForeignKey(
+        UserWithSubscriptions,
+        on_delete=models.CASCADE,
+        related_name='shopping_cart',
+        verbose_name='Пользователь',
+    )
+    recipe = models.ForeignKey(
+        'recipes.Recipe',
+        on_delete=models.CASCADE,
+        related_name='shopping_cart',
+        verbose_name='Рецепт',
+    )
+
+    class Meta:
+        """Настройки модели."""
+
+        constraints = (
+            models.UniqueConstraint(fields=('user', 'recipe'),
+                                    name='unique_shopping'),
+        )
+        verbose_name = 'Покупка'
+        verbose_name_plural = 'Список покупок'
+
+    def __str__(self):
+        """Строковое представление."""
+        return f'Список покупок: {self.user.username} - {self.recipe.name}'
+
+
+class Subscription(models.Model):
+    """Модель подписок."""
+
+    user = models.ForeignKey(
+        UserWithSubscriptions,
+        on_delete=models.CASCADE,
+        related_name='follower',
+        verbose_name='Подписчик',
+    )
+    author = models.ForeignKey(
+        UserWithSubscriptions,
+        on_delete=models.CASCADE,
+        related_name='following',
+        verbose_name='Автор',
+    )
+
+    class Meta:
+        """Настройки модели."""
+
+        constraints = (
+            models.UniqueConstraint(fields=('user', 'author'),
+                                    name='unique_subscription'),
+        )
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+
+    def __str__(self):
+        """Строковое представление."""
+        return f'Подписка: {self.user.username} - {self.author.username}'
