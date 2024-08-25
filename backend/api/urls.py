@@ -2,6 +2,7 @@
 
 from django.urls import include, path  # type: ignore
 from rest_framework import routers  # type: ignore
+
 from .views import (TagViewSet, RecipeViewSet, IngredientViewSet, UserViewSet,
                     ShortLinkView, LoadDataView)
 
