@@ -10,7 +10,7 @@ Foodgram
 
 ### Технологии
 
-Python, Django, Django Rest Framework, Pytest, Flake8, JWT, redoc
+Python, Django, Django Rest Framework, Pytest, Flake8, JWT, redoc, Redis
 
 ### Команда проекта
 
