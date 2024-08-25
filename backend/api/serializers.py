@@ -261,7 +261,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         for ingredient_id, ingredient_dict in new_ingredients_dict.items():
             if ingredient_id not in old_ingredients_ids:
                 new_ingredients.append(ingredient_dict)
-        self.create_recipe_ingredients(instance, new_ingredients) 
+        self.create_recipe_ingredients(instance, new_ingredients)
         instance.save()
         return instance
 
