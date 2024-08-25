@@ -4,11 +4,9 @@ from django.contrib.auth.admin import UserAdmin  # type: ignore
 from users.models import UserWithSubscriptions, Subscription
 
 UserAdmin.fieldsets += (
-    ('Extra Fields', {'fields': ('subscriptions',
-                                 'avatar',
+    ('Extra Fields', {'fields': ('avatar',
                                  'role',
-                                 'favorites',
-                                 'shopping_cart')}),
+                                 )}),
 )
 UserAdmin.list_display += (
     'avatar',

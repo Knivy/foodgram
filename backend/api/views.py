@@ -16,8 +16,10 @@ from django_filters.rest_framework import DjangoFilterBackend  # type: ignore
 from django.db.models import (Case, When, BooleanField,  # type: ignore
                               Value, Sum)
 from rest_framework.exceptions import NotFound  # type: ignore
+from django.shortcuts import redirect  # type: ignore
 
-from recipes.models import Tag, Recipe, Ingredient
+from recipes.models import Tag, Recipe, Ingredient, RecipeIngredient
+from users.models import Favorite, Subscription, ShoppingCart
 from .serializers import (TagSerializer, RecipeWriteSerializer,
                           RecipeReadSerializer, IngredientSerializer,
                           UserReadSerializer, UserWriteSerializer,
@@ -133,32 +135,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def delete_favorite(self, request, pk):
         """Удалить из избранного."""
         user = request.user
-        recipe = get_object_or_404(Recipe, id=pk)
-        if user.favorites.filter(id=pk).exists():
-            user.favorites.remove(recipe)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        favorite = get_object_or_404(Favorite, user=user, recipe__id=pk)
+        favorite.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def convert_to_txt(self, recipes):
         """Конвертация в TXT."""
         if not recipes:
             return 'Нет рецептов в списке покупок.'
-        ingredients = {}
-        ingredients = recipes.values(
-            'ingredients__ingredient__name',
-            'ingredients__ingredient__measurement_unit',
-            'ingredients__amount').annotate(
-            total_amount=Sum('ingredients__amount'),
-            ).values(
-                'ingredients__ingredient__name',
-                'ingredients__ingredient__measurement_unit',
-                'total_amount').order_by('ingredients__ingredient__name')
+        recipe_ingredients = (RecipeIngredient.objects.
+                              filter(recipe__in=recipes))
+        ingredients = recipe_ingredients.values(
+            'ingredient__name',
+            'ingredient__measurement_unit').annotate(
+            total_amount=Sum('amount'),
+            ).order_by('ingredient__name')
         if not ingredients.exists():
             return 'Нет ингредиентов для покупки.'
         txt = ['Список покупок.\n\n']  # Дальше список изменяем.
         for ingredient in ingredients:
-            name = ingredient.get('ingredients__ingredient__name')
-            unit = ingredient.get('ingredients__ingredient__measurement_unit')
+            name = ingredient.get('ingredient__name')
+            unit = ingredient.get('ingredient__measurement_unit')
             amount = ingredient.get('total_amount')
             txt.append(f'{name}:  {unit} — {amount}\n')
         return ''.join(txt)
@@ -199,11 +196,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def delete_shopping_cart(self, request, pk):
         """Удаление из списка покупок."""
         user = request.user
-        recipe = get_object_or_404(Recipe, id=pk)
-        if user.shopping_cart.filter(id=pk).exists():
-            user.shopping_cart.remove(recipe)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        raise NotFound('Рецепт не найден в списке покупок.')
+        shopping = get_object_or_404(ShoppingCart,
+                                     user=user,
+                                     recipe__id=pk)
+        shopping.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
@@ -214,7 +211,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def get_link(self, request, pk):
         """Получение короткой ссылки."""
-        recipe = self.get_object(pk)
+        self.lookup_field = 'pk'
+        recipe = self.get_object()
         return Response({
             'short-link':
             (f'{settings.CURRENT_HOST}:{settings.CURRENT_PORT}'
@@ -320,11 +318,11 @@ class UserViewSet(viewsets.ModelViewSet):
     def delete_subscribe(self, request, pk):
         """Удалить из подписок."""
         user = request.user
-        subscription = get_object_or_404(User, id=pk)
-        if user.subscriptions.filter(id=pk).exists():
-            user.subscriptions.remove(subscription)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        raise NotFound('Пользователь не найден в подписках.')
+        subscription = get_object_or_404(Subscription,
+                                         author__id=pk,
+                                         user=user)
+        subscription.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_permissions(self):
         if self.action in {'partial_update', 'destroy'}:
@@ -361,9 +359,11 @@ class ShortLinkView(APIView):
     def get(self, request, short_link):
         """Получение рецепта по короткой ссылке."""
         recipe = get_object_or_404(Recipe, short_url=short_link)
-        serializer = RecipeReadSerializer(recipe,
-                                          context={'request': request})
-        return Response(serializer.data)
+        return redirect(f'/api/recipes/{recipe.id}')
+
+        # serializer = RecipeReadSerializer(recipe,
+        #                                   context={'request': request})
+        # return Response(serializer.data)
 
 
 class LoadDataView(APIView):
