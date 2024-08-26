@@ -339,8 +339,8 @@ class UserViewSet(viewsets.ModelViewSet):
         """Список подписок."""
         user = request.user
         queryset = user.subscriptions.all()
-        if not queryset.exists() or not queryset:
-            return Response([], status=status.HTTP_200_OK)
+        # if not queryset.exists() or not queryset:
+        #     return Response([], status=status.HTTP_200_OK)
         query = self.request.query_params.get('limit')
         if query:
             queryset = queryset[:int(query)]
