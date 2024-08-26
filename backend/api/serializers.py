@@ -93,7 +93,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     """Сериализатор рецептов на чтение."""
 
     tags = TagSerializer(many=True)
-    ingredients = IngredientSerializer(many=True)
+    ingredients = serializers.SerializerMethodField()
     author = serializers.SerializerMethodField()
     # is_favorited = serializers.SerializerMethodField()
     # is_in_shopping_cart = serializers.SerializerMethodField()
@@ -128,6 +128,16 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         """Поле, автор рецепта."""
         return UserReadSerializer(recipe.author,
                                   context=self.context).data
+
+    def get_ingredients(self, recipe):
+        """Поле, ингредиенты рецепта."""
+        ingredients = RecipeIngredient.objects.filter(recipe=recipe)
+        return [{'id': recipe_ingredient.ingredient.id,
+                'name': recipe_ingredient.ingredient.name,
+                 'measurement_unit':
+                 recipe_ingredient.ingredient.measurement_unit,
+                 'amount': recipe_ingredient.amount}
+                for recipe_ingredient in ingredients]
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
