@@ -165,26 +165,32 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def validate_tags(self, tags):
         """Валидация тегов."""
+        if not tags:
+            raise serializers.ValidationError(
+                'Не указаны теги.')
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError(
-                {'tags': ('Теги не должны повторяться.',)})
+                'Теги не должны повторяться.')
         if not Tag.objects.filter(id__in=tags).exists():
             raise serializers.ValidationError(
-                {'tags': ('Не все указанные теги существуют.',)})
+                'Не все указанные теги существуют.')
         return tags
 
     def validate_ingredients(self, ingredients):
         """Валидация ингредиентов."""
+        if not ingredients:
+            raise serializers.ValidationError(
+                'Не указаны ингредиенты.')
         if len(ingredients) != len(set(
                 (ingredient.get('id') for ingredient in ingredients))):
             raise serializers.ValidationError(
-                {'ingredients': ('Ингредиенты не должны повторяться.',)})
+                'Ингредиенты не должны повторяться.')
         ingredient_objects = Ingredient.objects.filter(id__in=[
             ingredient.get('id') for ingredient in ingredients]).order_by()
         if (not ingredient_objects.exists() or
            len(ingredients) != ingredient_objects.count()):
             raise serializers.ValidationError(
-                {'ingredients': ('Не все указанные ингредиенты существуют.',)})
+                'Не все указанные ингредиенты существуют.')
         i = 0
         for ingredient_object in ingredient_objects:
             ingredient = ingredients[i]
@@ -228,13 +234,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         instance.text = validated_data.get('text', instance.text)
         instance.image = validated_data.get('image', instance.image)
         tags = validated_data.get('tags')
-        if not tags:
-            raise serializers.ValidationError(
-                {'tags': ('Не указаны теги.',)})
+        tags = self.validate_tags(tags)
         ingredients = validated_data.get('ingredients')
-        if not ingredients:
-            raise serializers.ValidationError(
-                {'ingredients': ('Не указаны ингредиенты.',)})
+        ingredients = self.validate_ingredients(ingredients)
         validated_data.pop('tags')
         validated_data.pop('ingredients')
         instance = super().update(instance, validated_data)
