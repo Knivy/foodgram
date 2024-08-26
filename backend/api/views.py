@@ -336,7 +336,10 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def subscriptions(self, request):
         """Список подписок."""
-        serializer = self.get_serializer(self.get_subscriptions_queryset(),
+        queryset = self.get_subscriptions_queryset()
+        if not queryset.exists():
+            return Response([], status=status.HTTP_200_OK)
+        serializer = self.get_serializer(queryset,
                                          many=True,
                                          context={'request': request})
         return Response(serializer.data)
@@ -360,10 +363,6 @@ class ShortLinkView(APIView):
         """Получение рецепта по короткой ссылке."""
         recipe = get_object_or_404(Recipe, short_url=short_link)
         return redirect(f'/api/recipes/{recipe.id}')
-
-        # serializer = RecipeReadSerializer(recipe,
-        #                                   context={'request': request})
-        # return Response(serializer.data)
 
 
 class LoadDataView(APIView):
