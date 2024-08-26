@@ -173,8 +173,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         response = HttpResponse(txt, content_type='text/plain; charset=UTF-8')
         response['Content-Disposition'] = ('attachment; '
                                            'filename="shopping-list.txt"')
-        # return FileResponse(txt, as_attachment=True,
-        #                     filename='Список покупок.txt')
         return response
 
     @action(
@@ -225,13 +223,16 @@ class UserViewSet(viewsets.ModelViewSet):
 
     http_method_names = ('get', 'post', 'put', 'delete')
     permission_classes = (AllowAny,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    queryset = User.objects.all()
 
     def get_queryset(self):
         """Получение списка пользователей."""
-        query = self.request.GET.get('limit')
+        queryset = super().get_queryset()
+        query = self.request.query_params.get('limit')
         if query:
-            return User.objects.all()[:int(query)]
-        return User.objects.all()
+            queryset = queryset[:int(query)]
+        return queryset
 
     @action(
         detail=False,
@@ -336,22 +337,18 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def subscriptions(self, request):
         """Список подписок."""
-        queryset = self.get_subscriptions_queryset()
-        if not queryset.exists():
+        user = request.user
+        queryset = User.objects.filter(user=user)
+        if not queryset.exists() or not queryset:
             return Response([], status=status.HTTP_200_OK)
-        serializer = self.get_serializer(queryset,
-                                         many=True,
-                                         context={'request': request})
-        return Response(serializer.data)
-
-    def get_subscriptions_queryset(self):
-        """Подписки."""
-        user = self.request.user
-        queryset = user.subscriptions.all()
-        query = self.request.GET.get('limit')
+        query = self.request.query_params.get('limit')
         if query:
             queryset = queryset[:int(query)]
-        return queryset
+        pages = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(pages,
+                                         many=True,
+                                         context={'request': request})
+        return self.get_paginated_response(serializer.data)
 
 
 class ShortLinkView(APIView):
