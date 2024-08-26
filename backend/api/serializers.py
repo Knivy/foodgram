@@ -95,8 +95,6 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     ingredients = serializers.SerializerMethodField()
     author = serializers.SerializerMethodField()
-    # is_favorited = serializers.SerializerMethodField()
-    # is_in_shopping_cart = serializers.SerializerMethodField()
     is_favorited = serializers.BooleanField()
     is_in_shopping_cart = serializers.BooleanField()
 
@@ -254,32 +252,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         instance.tags.set(tags)
         RecipeIngredient.objects.filter(recipe=instance).delete()
         self.create_recipe_ingredients(instance, ingredients)
-        # new_ingredients_dict = {
-        #     ingredient.get('id'): {
-        #         'amount': ingredient.get('amount'),
-        #         'object': ingredient.get('object')
-        #     } for ingredient in ingredients
-        # }
-        # old_ingredients = RecipeIngredient.objects.filter(
-        #     recipe=instance)
-        # old_ingredients_ids = set()
-        # to_delete = []
-        # for recipe_ingredient in old_ingredients:
-        #     recipe_ingredient_id = recipe_ingredient.id
-        #     if recipe_ingredient_id in new_ingredients_dict:
-        #         recipe_ingredient.amount = (
-        #             new_ingredients_dict[recipe_ingredient_id]['amount'])
-        #         recipe_ingredient.save()
-        #         old_ingredients_ids.add(recipe_ingredient_id)
-        #     else:
-        #         to_delete.append((recipe_ingredient,))
-        # for recipe_ingredient in to_delete:
-        #     recipe_ingredient[0].delete()
-        # new_ingredients = []
-        # for ingredient_id, ingredient_dict in new_ingredients_dict.items():
-        #     if ingredient_id not in old_ingredients_ids:
-        #         new_ingredients.append(ingredient_dict)
-        # self.create_recipe_ingredients(instance, new_ingredients)
         instance.save()
         return instance
 

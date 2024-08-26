@@ -11,11 +11,10 @@ from rest_framework.response import Response  # type: ignore
 from django.shortcuts import get_object_or_404  # type: ignore
 from django.conf import settings  # type: ignore
 from rest_framework.views import APIView  # type: ignore
-from django.http import FileResponse, HttpResponse  # type: ignore
+from django.http import HttpResponse  # type: ignore
 from django_filters.rest_framework import DjangoFilterBackend  # type: ignore
 from django.db.models import (Case, When, BooleanField,  # type: ignore
                               Value, Sum)
-from rest_framework.exceptions import NotFound  # type: ignore
 from django.shortcuts import redirect  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient, RecipeIngredient
@@ -339,8 +338,6 @@ class UserViewSet(viewsets.ModelViewSet):
         """Список подписок."""
         user = request.user
         queryset = user.subscriptions.all()
-        # if not queryset.exists() or not queryset:
-        #     return Response([], status=status.HTTP_200_OK)
         query = self.request.query_params.get('limit')
         if query:
             queryset = queryset[:int(query)]
