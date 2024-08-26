@@ -20,7 +20,7 @@ class BaseAdmin(admin.ModelAdmin):
     """Базовый администратор."""
 
     actions = ('change_selected',
-                'delete_selected')
+               'delete_selected')
     empty_value_display = '-пусто-'
 
 

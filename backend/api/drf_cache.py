@@ -21,4 +21,3 @@ class CacheResponseMixin:
         queryset = super().get_queryset()
         cache.set(cache_key, queryset, self.cache_timeout)
         return queryset
-

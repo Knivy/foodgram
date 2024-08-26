@@ -147,8 +147,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ingredients = recipe_ingredients.values(
             'ingredient__name',
             'ingredient__measurement_unit').annotate(
-            total_amount=Sum('amount'),
-            ).order_by('ingredient__name')
+            total_amount=Sum('amount')).order_by('ingredient__name')
         if not ingredients.exists():
             return 'Нет ингредиентов для покупки.'
         txt = ['Список покупок.\n\n']  # Дальше список изменяем.
