@@ -40,7 +40,7 @@ class RecipeFilter(filters.FilterSet):
             return queryset.none()
         if not value:
             return queryset.exclude(favorites__in=(user,))
-        return queryset.filter(favorites__in=(user, ))
+        return queryset.filter(favorites__in=(user,))
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
         """Фильтрация по флагу списка покупок."""
@@ -53,14 +53,6 @@ class RecipeFilter(filters.FilterSet):
 
     def filter_queryset(self, queryset):
         """Фильтрация по флагам."""
-        request = self.request
-        query = request.GET.get('author')
-        if query:
-            queryset = queryset.filter(author__id=int(query))
-        tags = request.GET.get('tags')
-        if tags:
-            tags = tags.split(',')
-            queryset = queryset.filter(tags__slug__in=tags).distinct()
         queryset = super().filter_queryset(queryset)
         query = self.request.GET.get('limit')
         if query:

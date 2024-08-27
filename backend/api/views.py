@@ -14,7 +14,7 @@ from rest_framework.views import APIView  # type: ignore
 from django.http import HttpResponse  # type: ignore
 from django_filters.rest_framework import DjangoFilterBackend  # type: ignore
 from django.db.models import (Case, When, BooleanField,  # type: ignore
-                              Value, Sum)
+                              Value, Sum, F)
 from django.shortcuts import redirect  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient, RecipeIngredient
@@ -65,7 +65,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete')
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = RecipeFilter
-    queryset = Recipe.objects.all()
 
     def get_permissions(self):
         """Разрешения."""
@@ -95,7 +94,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return RecipeWriteSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = Recipe.objects.all()
         user = self.request.user
         if not user.is_authenticated:
             return queryset.annotate(
@@ -122,7 +121,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, pk):
         """Добавление в избранное."""
-        recipe = get_object_or_404(Recipe, id=pk)
+        self.lookup_field = 'pk'
+        recipe = self.get_object()
         serializer = self.get_serializer(recipe,
                                          data={'id': pk},
                                          context={'request': request})
@@ -145,22 +145,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe_ingredients = (RecipeIngredient.objects.
                               filter(recipe__in=recipes))
         ingredients = recipe_ingredients.values(
-            'ingredient__name',
-            'ingredient__measurement_unit').annotate(
-            total_amount=Sum('amount')).order_by('ingredient__name')
+            name=F('ingredient__name'),
+            measurement_unit=F('ingredient__measurement_unit')).annotate(
+            total_amount=Sum('amount')).order_by('name')
         if not ingredients.exists():
             return 'Нет ингредиентов для покупки.'
-        txt = ['Список покупок.\n\n']  # Дальше список изменяем.
-        for ingredient in ingredients:
-            name = ingredient.get('ingredient__name')
-            unit = ingredient.get('ingredient__measurement_unit')
-            amount = ingredient.get('total_amount')
-            txt.append(f'{name}:  {unit} — {amount}\n')
-        return ''.join(txt)
+        txt = ['Список покупок.\n\n']
+        txt.extend('\n'.join(
+            ((f'{ingredient.get("name")}:  '
+              f'{ingredient.get("measurement_unit")} '
+              f'— {ingredient.get("total_amount")}')
+             for ingredient in ingredients)
+        ))
+        return txt
 
     @action(
         detail=False,
-        methods=('get',),
         permission_classes=(IsAuthenticated,)
     )
     def download_shopping_cart(self, request):
@@ -180,7 +180,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def shopping_cart(self, request, pk):
         """Добавление рецепта в список покупок."""
-        recipe = get_object_or_404(Recipe, id=pk)
+        self.lookup_field = 'pk'
+        recipe = self.get_object()
         serializer = self.get_serializer(recipe,
                                          data={'id': pk},
                                          context={'request': request})
@@ -355,7 +356,8 @@ class ShortLinkView(APIView):
     def get(self, request, short_link):
         """Получение рецепта по короткой ссылке."""
         recipe = get_object_or_404(Recipe, short_url=short_link)
-        return redirect(f'/api/recipes/{recipe.id}')
+        # return redirect(f'/api/recipes/{recipe.id}')
+        return redirect(f'/recipes/{recipe.id}')
 
 
 class LoadDataView(APIView):

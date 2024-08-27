@@ -114,7 +114,7 @@ class Recipe(models.Model):
                                     auto_now_add=True,
                                     db_index=True)
     short_url = models.URLField(verbose_name='Короткая ссылка',
-                                blank=True, null=True)
+                                blank=True)
 
     class Meta:
         """Настройки."""
