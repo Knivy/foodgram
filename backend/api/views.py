@@ -28,6 +28,7 @@ from .serializers import (TagSerializer, RecipeWriteSerializer,
 from .permissions import AuthorOnly, ForbiddenPermission
 from .filters import RecipeFilter
 from .drf_cache import CacheResponseMixin
+from .pagination import LimitPagination
 
 User = get_user_model()
 
@@ -65,6 +66,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete')
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = RecipeFilter
+    pagination_class = LimitPagination
 
     def get_permissions(self):
         """Разрешения."""

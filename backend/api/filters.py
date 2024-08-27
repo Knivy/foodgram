@@ -27,11 +27,11 @@ class RecipeFilter(filters.FilterSet):
         model = Recipe
         fields = ('tags', 'author', 'is_favorited', 'is_in_shopping_cart')
 
-    def get_filterset_config(self):
-        """Для доступа к запросу."""
-        config = super().get_filterset_config()
-        config['request'] = self.request
-        return config
+    # def get_filterset_config(self):
+    #     """Для доступа к запросу."""
+    #     config = super().get_filterset_config()
+    #     config['request'] = self.request
+    #     return config
 
     def filter_is_favorited(self, queryset, name, value):
         """Фильтрация по флагу избранное."""
@@ -50,11 +50,3 @@ class RecipeFilter(filters.FilterSet):
         if not value:
             return queryset.exclude(shopping_cart__in=(user,))
         return queryset.filter(shopping_cart__in=(user,))
-
-    def filter_queryset(self, queryset):
-        """Фильтрация по флагам."""
-        queryset = super().filter_queryset(queryset)
-        query = self.request.GET.get('limit')
-        if query:
-            queryset = queryset[:int(query)]
-        return queryset
