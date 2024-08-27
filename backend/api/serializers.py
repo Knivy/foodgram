@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404  # type: ignore
 from django.db.models import Case, When, BooleanField, Value  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient, RecipeIngredient
-from users.models import Subscription, Favorite, ShoppingCart
+from users.models import Favorite, ShoppingCart
 
 User = get_user_model()
 
@@ -184,7 +184,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         while recipe_id:
             number.append(recipe_id % 23)
             recipe_id //= 23
-        return ''.join((str(digit) for digit in reversed(number)))
+        return int(''.join((str(digit) for digit in reversed(number))))
 
     def validate(self, data):
         request = self.context.get('request')
@@ -194,9 +194,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def validate_tags(self, tags):
         """Валидация тегов."""
-        # if not tags:
-        #     raise serializers.ValidationError(
-        #         'Не указаны теги.')
+        if not tags:
+            raise serializers.ValidationError(
+                'Не указаны теги.')
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError(
                 'Теги не должны повторяться.')
@@ -207,9 +207,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def validate_ingredients(self, ingredients):
         """Валидация ингредиентов."""
-        # if not ingredients:
-        #     raise serializers.ValidationError(
-        #         'Не указаны ингредиенты.')
+        if not ingredients:
+            raise serializers.ValidationError(
+                'Не указаны ингредиенты.')
         ingredient_ids = [ingredient.get('id') for ingredient in ingredients]
         if len(ingredients) != len(set(ingredient_ids)):
             raise serializers.ValidationError(

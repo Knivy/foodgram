@@ -9,7 +9,8 @@ class AuthorOnly(IsAuthenticated):
 
     def has_object_permission(self, request, view, recipe):
         """Проверка авторства."""
-        return recipe.author == request.user
+        return (recipe.author == request.user
+                or request.user.is_superuser_or_admin)
 
 
 class ForbiddenPermission(IsAuthenticated):
