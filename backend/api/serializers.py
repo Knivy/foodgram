@@ -243,7 +243,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         while recipe_id:
             number.append(chr(97 + recipe_id % 23))
             recipe_id //= 23
-        return ''.join((str(digit) for digit in reversed(number)))
+        return ''.join((str(digit) for digit in number))
 
     def create(self, validated_data):
         """Создание рецепта."""
@@ -269,7 +269,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         # tags = validated_data.get('tags')
         # #tags = self.validate_tags(tags)
         # ingredients = validated_data.get('ingredients')
-        #ingredients = self.validate_ingredients(ingredients)
+        # ingredients = self.validate_ingredients(ingredients)
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
         instance = super().update(instance, validated_data)
