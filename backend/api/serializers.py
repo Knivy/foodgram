@@ -237,6 +237,14 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             ) for ingredient in ingredients
         ])
 
+    def convert_to_short_link(self, recipe_id):
+        """Конвертация в короткую ссылку."""
+        number = []
+        while recipe_id:
+            number.append(chr(97 + recipe_id % 23))
+            recipe_id //= 23
+        return ''.join((str(digit) for digit in reversed(number)))
+
     def create(self, validated_data):
         """Создание рецепта."""
         ingredients = validated_data.pop('ingredients')
@@ -244,6 +252,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         recipe = Recipe.objects.create(
             author=self.context.get('request').user,
             **validated_data)
+        recipe.short_link = self.convert_to_short_link(recipe.id)
         recipe.tags.set(tags)
         self.create_recipe_ingredients(recipe, ingredients)
         recipe.save()

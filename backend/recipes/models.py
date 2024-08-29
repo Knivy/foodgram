@@ -114,7 +114,7 @@ class Recipe(models.Model):
                                     auto_now_add=True,
                                     db_index=True)
     short_url = models.TextField(verbose_name='Короткая ссылка',
-                                 blank=True)
+                                 blank=True, unique=True)
 
     class Meta:
         """Настройки."""
@@ -126,20 +126,6 @@ class Recipe(models.Model):
     def __str__(self):
         """Строковое представление."""
         return self.name
-
-    def convert_to_short_link(self, recipe_id):
-        """Конвертация в короткую ссылку."""
-        number = []
-        while recipe_id:
-            number.append(chr(97 + recipe_id % 23))
-            recipe_id //= 23
-        return ''.join((str(digit) for digit in reversed(number)))
-
-    def save(self, *args, **kwargs):
-        """Переопределение метода сохранения."""
-        if not self.short_url:
-            self.short_url = self.convert_to_short_link(self.id)
-        return super().save(*args, **kwargs)
 
 
 class RecipeIngredient(models.Model):
