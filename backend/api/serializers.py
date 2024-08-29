@@ -162,6 +162,16 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         allow_empty=False)
     ingredients = IngredientWriteSerializer(many=True,
                                             allow_empty=False)
+    extra_kwargs = {
+        'validate_tags': {
+            'create': True,
+            'update': True,
+        },
+        'validate_ingredients': {
+            'create': True,
+            'update': True,
+        },
+    }
 
     class Meta:
         """Настройки сериализатора."""
@@ -173,18 +183,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                   'name',
                   'text',
                   'cooking_time')
-
-    def convert_to_short_link(self, recipe_id):
-        """
-        Конвертация в короткую ссылку.
-
-        Используется преобразование id из 10тичной системы в 23-ричную.
-        """
-        number = []
-        while recipe_id:
-            number.append(recipe_id % 23)
-            recipe_id //= 23
-        return int(''.join((str(digit) for digit in reversed(number))))
 
     def validate(self, data):
         request = self.context.get('request')
@@ -200,7 +198,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError(
                 'Теги не должны повторяться.')
-        if not Tag.objects.filter(id__in=tags).count() != len(tags):
+        if not Tag.objects.filter(pk__in=tags).count() != len(tags):
             raise serializers.ValidationError(
                 'Не все указанные теги существуют.')
         return tags
@@ -241,12 +239,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         """Создание рецепта."""
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
-        # recipe = Recipe.objects.create(
-        #     author=self.context.get('request').user,
-        #     **validated_data)
-        recipe = super().create(validated_data,
-                                author=self.context.get('request').user)
-        recipe.short_url = self.convert_to_short_link(recipe.id)
+        recipe = Recipe.objects.create(
+            author=self.context.get('request').user,
+            **validated_data)
         recipe.tags.set(tags)
         self.create_recipe_ingredients(recipe, ingredients)
         recipe.save()
@@ -260,12 +255,12 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         # )
         # instance.text = validated_data.get('text', instance.text)
         # instance.image = validated_data.get('image', instance.image)
-        tags = validated_data.get('tags')
-        tags = self.validate_tags(tags)
-        ingredients = validated_data.get('ingredients')
-        ingredients = self.validate_ingredients(ingredients)
-        validated_data.pop('tags')
-        validated_data.pop('ingredients')
+        # tags = validated_data.get('tags')
+        # #tags = self.validate_tags(tags)
+        # ingredients = validated_data.get('ingredients')
+        #ingredients = self.validate_ingredients(ingredients)
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
         instance = super().update(instance, validated_data)
         instance.tags.clear()
         instance.tags.set(tags)
