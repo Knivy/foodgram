@@ -252,12 +252,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         recipe = Recipe.objects.create(
             author=self.context.get('request').user,
             **validated_data)
-        try:
-            short_link = self.convert_to_short_link(recipe.id)
-            recipe.short_link = short_link
-        except Exception:
-            raise serializers.ValidationError(
-                f'Не удалось создать короткую ссылку {short_link}.')
+        recipe.short_url = self.convert_to_short_link(recipe.id)
         recipe.tags.set(tags)
         self.create_recipe_ingredients(recipe, ingredients)
         recipe.save()
