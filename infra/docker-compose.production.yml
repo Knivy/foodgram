@@ -5,7 +5,7 @@ volumes:
 
 services:
   db:
-    image: postgres:13
+    image: postgres:13-alpine
     env_file: .env
     volumes:
       - pg_data:/var/lib/postgresql/data 
@@ -36,7 +36,7 @@ services:
     depends_on:
       - backend  
   redis:
-    image: albinagiliazova/foodgram_redis  
+    image: redis:alpine 
     env_file: .env 
     ports:
       - "6379:6379"    

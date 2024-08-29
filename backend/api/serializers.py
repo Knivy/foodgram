@@ -198,7 +198,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError(
                 'Теги не должны повторяться.')
-        if not Tag.objects.filter(pk__in=tags).count() != len(tags):
+        tag_objects = Tag.objects.filter(id__in=tags).order_by()
+        if not tag_objects.exists() or tag_objects.count() < len(tags):
             raise serializers.ValidationError(
                 'Не все указанные теги существуют.')
         return tags
