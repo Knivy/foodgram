@@ -139,7 +139,7 @@ class Recipe(models.Model):
         """Переопределение метода сохранения."""
         if not self.short_url:
             self.short_url = self.convert_to_short_link(self.id)
-        super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class RecipeIngredient(models.Model):
