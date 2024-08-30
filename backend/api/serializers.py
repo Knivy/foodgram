@@ -273,8 +273,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         try:
             return RecipeReadSerializer(
-                Recipe.objects.filter(
-                    id=instance.id).annotate_fields(request.user),
+                instance,
                 context=self.context).data
         except Exception as err:
             raise serializers.ValidationError(
