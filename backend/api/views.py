@@ -218,14 +218,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
              f'/s/{recipe.short_url}'),
         })
 
-    def update(self, request, pk=None):
-        # Переопределение, чтобы вызывалась валидация.
-        serializer = self.get_serializer(self.get_object(),
-                                         data=request.data,
-                                         context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+    # def update(self, request, pk=None):
+    #     # Переопределение, чтобы вызывалась валидация.
+    #     serializer = self.get_serializer(self.get_object(),
+    #                                      data=request.data,
+    #                                      context={'request': request})
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()
+    #     return Response(serializer.data)
 
 
 class UserViewSet(viewsets.ModelViewSet):
