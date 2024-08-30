@@ -124,8 +124,8 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     ingredients = serializers.SerializerMethodField()
     author = UserReadSerializer()
-    is_favorited = serializers.BooleanField()
-    is_in_shopping_cart = serializers.BooleanField()
+    is_favorited = serializers.BooleanField(read_only=True)
+    is_in_shopping_cart = serializers.BooleanField(read_only=True)
 
     class Meta:
         """Настройки сериализатора."""
@@ -161,16 +161,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         allow_empty=False)
     ingredients = IngredientWriteSerializer(many=True,
                                             allow_empty=False)
-    extra_kwargs = {
-        'validate_tags': {
-            'create': True,
-            'update': True,
-        },
-        'validate_ingredients': {
-            'create': True,
-            'update': True,
-        },
-    }
 
     class Meta:
         """Настройки сериализатора."""
@@ -187,6 +177,14 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request:
             raise serializers.ValidationError('4. Нет данных запроса.')
+        tags = data.get('tags')
+        if not tags:
+            raise serializers.ValidationError(
+                'Не указаны теги.')
+        ingredients = data.get('ingredients')
+        if not ingredients:
+            raise serializers.ValidationError(
+                'Не указаны ингредиенты.')
         return data
 
     def validate_tags(self, tags):
@@ -270,10 +268,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         """Представление рецепта."""
-        request = self.context.get('request')
         return RecipeReadSerializer(
-                Recipe.objects.filter(
-                    id=instance.id).annotate_fields(request.user).first(),
+                instance,
                 context=self.context).data
 
 

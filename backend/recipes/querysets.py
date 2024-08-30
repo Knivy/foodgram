@@ -21,7 +21,7 @@ class AnnotatedRecipeQuerySet(QuerySet):
             self.select_related('author')
             .prefetch_related('tags', 'ingredients')
             .annotate(
-                is_favorited=Exists( 
+                is_favorited=Exists(
                     Favorite.objects.filter(recipe=OuterRef('pk'), user=user)
                 ),
                 is_in_shopping_cart=Exists(
