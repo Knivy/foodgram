@@ -271,9 +271,13 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Представление рецепта."""
         request = self.context.get('request')
-        return RecipeReadSerializer(
-            instance.annotate_fields(request.user),
-            context=self.context).data
+        try:
+            return RecipeReadSerializer(
+                instance.annotate_fields(request.user),
+                context=self.context).data
+        except Exception as err:
+            raise serializers.ValidationError(
+                f'Ошибка при чтении рецепта: {err}')
 
 
 class UserWriteSerializer(serializers.ModelSerializer):
