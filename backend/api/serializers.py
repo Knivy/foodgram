@@ -229,13 +229,17 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def create_recipe_ingredients(self, recipe, ingredients):
         """Создание ингредиентов рецепта."""
-        RecipeIngredient.objects.bulk_create([
-            RecipeIngredient(
-                ingredient__id=ingredient.get('id'),
-                amount=ingredient.get('amount'),
-                recipe=recipe,
-            ) for ingredient in ingredients
-        ])
+        try:
+            RecipeIngredient.objects.bulk_create([
+                RecipeIngredient(
+                    ingredient__id=ingredient.get('id'),
+                    amount=ingredient.get('amount'),
+                    recipe=recipe,
+                ) for ingredient in ingredients
+            ])
+        except Exception as err:
+            raise serializers.ValidationError(
+                f'Ошибка при создании ингредиентов: {err}')
 
     def convert_to_short_link(self, recipe_id):
         """Конвертация в короткую ссылку."""
