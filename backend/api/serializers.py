@@ -259,21 +259,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """Обновление рецепта."""
-        # instance.name = validated_data.get('name', instance.name)
-        # instance.cooking_time = validated_data.get(
-        #     'cooking_time', instance.cooking_time
-        # )
-        # instance.text = validated_data.get('text', instance.text)
-        # instance.image = validated_data.get('image', instance.image)
-        # tags = validated_data.get('tags')
-        # #tags = self.validate_tags(tags)
-        # ingredients = validated_data.get('ingredients')
-        # ingredients = self.validate_ingredients(ingredients)
-        try:
-            tags = validated_data.pop('tags')
-            ingredients = validated_data.pop('ingredients')
-        except Exception:
-            raise serializers.ValidationError('Не переданы теги или ингредиенты.')
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
         instance = super().update(instance, validated_data)
         instance.tags.clear()
         instance.tags.set(tags)
@@ -285,27 +272,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Представление рецепта."""
         request = self.context.get('request')
-        if not request:
-            raise serializers.ValidationError('13. Нет данных запроса.')
-        if not request.user.is_authenticated:
-            instance = Recipe.objects.filter(id=instance.id).annotate(
-                is_favorited=Value(False),
-                is_in_shopping_cart=Value(False),
-            ).first()
-        else:
-            instance = Recipe.objects.filter(id=instance.id).annotate(
-                is_favorited=Case(
-                    When(favorites__in=(request.user,), then=True),
-                    default=False,
-                    output_field=BooleanField()
-                ),
-                is_in_shopping_cart=Case(
-                    When(shopping_cart__in=(request.user,), then=True),
-                    default=False,
-                    output_field=BooleanField()
-                ),
-            ).first()
-        return RecipeReadSerializer(instance, context=self.context).data
+        return RecipeReadSerializer(
+            Recipe.objects.filter(id=instance.id).annotate_fields(
+                request.user),
+            context=self.context).data
 
 
 class UserWriteSerializer(serializers.ModelSerializer):
@@ -411,9 +381,6 @@ class FavoriteCreateSerializer(serializers.Serializer):
 
     def save(self):
         """Добавление в избранное."""
-        # return Favorite.objects.create(
-        #     user=self.validated_data.get('user'),
-        #     recipe=self.validated_data.get('recipe'))
         return self.validated_data.get('user').favorites.add(
             self.validated_data.get('recipe'))
 
@@ -466,27 +433,10 @@ class SubscriptionSerializer(UserReadSerializer):
         if recipes_limit:
             recipes_limit = self.check_recipes_limit(recipes_limit)
             recipes = recipes[:recipes_limit]
-        if not request.user.is_authenticated:
-            recipes = recipes.annotate(
-                is_favorited=Value(False),
-                is_in_shopping_cart=Value(False),
-            )
-        else:
-            recipes = recipes.annotate(
-                is_favorited=Case(
-                    When(favorites__in=(request.user,), then=True),
-                    default=False,
-                    output_field=BooleanField()
-                ),
-                is_in_shopping_cart=Case(
-                    When(shopping_cart__in=(request.user,), then=True),
-                    default=False,
-                    output_field=BooleanField()
-                ),
-            )
-        return RecipeReadSerializer(recipes,
-                                    many=True,
-                                    context=self.context).data
+        return RecipeReadSerializer(
+            recipes.objects.annotate_fields(request.user),
+            many=True,
+            context=self.context).data
 
     def get_recipes_count(self, user):
         """Получение количества рецептов пользователя."""
@@ -526,9 +476,6 @@ class SubscriptionCreateSerializer(serializers.Serializer):
         """Создание подписки."""
         subscription_user = self.validated_data.get('subscription_user')
         user = self.validated_data.get('user')
-        # return Subscription.objects.create(
-        #     author=subscription_user,
-        #     user=user)
         return user.subscriptions.add(subscription_user)
 
     def to_representation(self, instance):
@@ -557,9 +504,6 @@ class ShoppingCreateSerializer(FavoriteCreateSerializer):
 
     def save(self):
         """Добавление рецепта в список покупок."""
-        # return ShoppingCart.objects.create(
-        #     user=self.validated_data.get('user'),
-        #     recipe=self.validated_data.get('recipe'))
         return self.validated_data.get('user').shopping_cart.add(
             self.validated_data.get('recipe'))
 

@@ -13,8 +13,7 @@ from django.conf import settings  # type: ignore
 from rest_framework.views import APIView  # type: ignore
 from django.http import HttpResponse  # type: ignore
 from django_filters.rest_framework import DjangoFilterBackend  # type: ignore
-from django.db.models import (Case, When, BooleanField,  # type: ignore
-                              Value, Sum, F)
+from django.db.models import Sum, F  # type: ignore
 from django.shortcuts import redirect  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient, RecipeIngredient
@@ -68,6 +67,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
     pagination_class = LimitPagination
 
+    def get_queryset(self):
+        """Кверисет."""
+        user = self.request.user
+        return Recipe.objects.annotate_fields(user)
+
     def get_permissions(self):
         """Разрешения."""
         if self.action in {'list', 'retrieve', 'get_link'}:
@@ -94,27 +98,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.action == 'shopping_cart':
             return ShoppingCreateSerializer
         return RecipeWriteSerializer
-
-    def get_queryset(self):
-        queryset = Recipe.objects.all()
-        user = self.request.user
-        if not user.is_authenticated:
-            return queryset.annotate(
-                is_favorited=Value(False),
-                is_in_shopping_cart=Value(False),
-            )
-        return queryset.annotate(
-            is_favorited=Case(
-                When(favorites__in=(user,), then=True),
-                default=False,
-                output_field=BooleanField()
-            ),
-            is_in_shopping_cart=Case(
-                When(shopping_cart__in=(user,), then=True),
-                default=False,
-                output_field=BooleanField()
-            ),
-        )
 
     @action(
         detail=True,
@@ -217,15 +200,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             (f'{settings.CURRENT_HOST}:{settings.CURRENT_PORT}'
              f'/s/{recipe.short_url}'),
         })
-
-    # def update(self, request, pk=None):
-    #     # Переопределение, чтобы вызывалась валидация.
-    #     serializer = self.get_serializer(self.get_object(),
-    #                                      data=request.data,
-    #                                      context={'request': request})
-    #     serializer.is_valid(raise_exception=True)
-    #     serializer.save()
-    #     return Response(serializer.data)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -367,7 +341,6 @@ class ShortLinkView(APIView):
     def get(self, request, short_link):
         """Получение рецепта по короткой ссылке."""
         recipe = get_object_or_404(Recipe, short_url=short_link)
-        # return redirect(f'/api/recipes/{recipe.id}')
         return redirect(f'/recipes/{recipe.id}')
 
 

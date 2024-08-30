@@ -13,6 +13,7 @@ from .constants import (MAX_NAME_LENGTH, MAX_SLUG_LENGTH, MAX_UNIT_LENGTH,
                         MAX_INGREDIENT_AMOUNT, MIN_INGREDIENT_AMOUNT,
                         MAX_COOKING_TIME, MIN_COOKING_TIME,
                         MAX_TAG_NAME_LENGTH, MAX_INGREDIENT_NAME_LENGTH)
+from .querysets import AnnotatedRecipeQuerySet
 
 
 def validate_slug(slug):
@@ -115,6 +116,7 @@ class Recipe(models.Model):
                                     db_index=True)
     short_url = models.TextField(verbose_name='Короткая ссылка',
                                  blank=True, unique=True)
+    objects = AnnotatedRecipeQuerySet.as_manager()
 
     class Meta:
         """Настройки."""
