@@ -6,7 +6,6 @@ from rest_framework import serializers  # type: ignore
 from django.core.files.base import ContentFile  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
 from django.shortcuts import get_object_or_404  # type: ignore
-from django.db.models import Case, When, BooleanField, Value  # type: ignore
 
 from recipes.models import Tag, Recipe, Ingredient, RecipeIngredient
 from users.models import Favorite, ShoppingCart
@@ -434,7 +433,7 @@ class SubscriptionSerializer(UserReadSerializer):
             recipes_limit = self.check_recipes_limit(recipes_limit)
             recipes = recipes[:recipes_limit]
         return RecipeReadSerializer(
-            recipes.objects.annotate_fields(request.user),
+            recipes.annotate_fields(request.user),
             many=True,
             context=self.context).data
 
