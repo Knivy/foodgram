@@ -220,11 +220,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
            or len(ingredients) != ingredient_objects.count()):
             raise serializers.ValidationError(
                 'Не все указанные ингредиенты существуют.')
-        # i = 0
-        # for ingredient_object in ingredient_objects:
-        #     ingredient = ingredients[i]
-        #     ingredient['object'] = ingredient_object
-        #     i += 1
         return ingredients
 
     def create_recipe_ingredients(self, recipe, ingredients):
@@ -274,8 +269,11 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         # #tags = self.validate_tags(tags)
         # ingredients = validated_data.get('ingredients')
         # ingredients = self.validate_ingredients(ingredients)
-        tags = validated_data.pop('tags')
-        ingredients = validated_data.pop('ingredients')
+        try:
+            tags = validated_data.pop('tags')
+            ingredients = validated_data.pop('ingredients')
+        except Exception:
+            raise serializers.ValidationError('Не переданы теги или ингредиенты.')
         instance = super().update(instance, validated_data)
         instance.tags.clear()
         instance.tags.set(tags)
