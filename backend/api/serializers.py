@@ -269,8 +269,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Представление рецепта."""
         return RecipeReadSerializer(
-                instance,
-                context=self.context).data
+            instance,
+            context=self.context).data
 
 
 class UserWriteSerializer(serializers.ModelSerializer):
