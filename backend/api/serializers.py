@@ -238,6 +238,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 ) for ingredient in ingredients
             ])
         except Exception as err:
+            recipe.text = 'Ошибка при создании ингредиентов'
+            recipe.save()
             raise serializers.ValidationError(
                 f'Ошибка при создании ингредиентов: {err}')
 
@@ -257,6 +259,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             author=self.context.get('request').user,
             **validated_data)
         recipe.short_url = self.convert_to_short_link(recipe.id)
+        recipe.save()
+        recipe.tags.clear()
         recipe.tags.set(tags)
         self.create_recipe_ingredients(recipe, ingredients)
         recipe.save()
