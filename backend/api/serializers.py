@@ -272,8 +272,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         """Представление рецепта."""
         request = self.context.get('request')
         return RecipeReadSerializer(
-            Recipe.objects.filter(id=instance.id).annotate_fields(
-                request.user),
+            instance.annotate_fields(request.user),
             context=self.context).data
 
 
