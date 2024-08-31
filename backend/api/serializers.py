@@ -78,14 +78,14 @@ class IngredientInRecipeReadSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('15. Нет данных запроса')
         recipe_id = self.context.get('recipe_id')
         try:
-            recipe_ingredient = RecipeIngredient.objects.get(
+            return RecipeIngredient.objects.get(
                 recipe__id=recipe_id,
                 ingredient=ingredient,
-            )
-            return recipe_ingredient.amount
-        except RecipeIngredient.DoesNotExist:
+            ).amount
+        except RecipeIngredient.DoesNotExist as err:
             raise serializers.ValidationError(
-                f'Не найден ингредиент с id {recipe_id}')
+                f'Не найден ингредиент {ingredient.id} рецепта {recipe_id}'
+                ) from err
 
 
 class UserReadSerializer(serializers.ModelSerializer):
@@ -222,16 +222,17 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def create_recipe_ingredients(self, recipe, ingredients):
         """Создание ингредиентов рецепта."""
         try:
-            RecipeIngredient.objects.bulk_create([
+            RecipeIngredient.objects.bulk_create((
                 RecipeIngredient(
                     ingredient_id=ingredient.get('id'),
                     amount=ingredient.get('amount'),
                     recipe=recipe,
                 ) for ingredient in ingredients
-            ])
+            ))
         except Exception as err:
             raise serializers.ValidationError(
-                f'Ошибка при создании ингредиентов: {err}')
+                f'Ошибка при создании ингредиентов: {err}',
+                code='database_error')
 
     def convert_to_short_link(self, recipe_id):
         """Конвертация в короткую ссылку."""

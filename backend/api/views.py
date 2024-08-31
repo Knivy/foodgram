@@ -186,7 +186,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
-        methods=('get',),
         permission_classes=(AllowAny,),
         url_path='get-link',
         url_name='get_link',
@@ -208,11 +207,10 @@ class UserViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'put', 'delete')
     permission_classes = (AllowAny,)
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
-    queryset = User.objects.all()
 
     def get_queryset(self):
         """Получение списка пользователей."""
-        queryset = super().get_queryset()
+        queryset = User.objects.all()
         query = self.request.query_params.get('limit')
         if query:
             queryset = queryset[:int(query)]
@@ -316,7 +314,6 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        methods=('get',),
         permission_classes=(IsAuthenticated,)
     )
     def subscriptions(self, request):

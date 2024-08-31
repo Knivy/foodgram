@@ -27,12 +27,6 @@ class RecipeFilter(filters.FilterSet):
         model = Recipe
         fields = ('tags', 'author', 'is_favorited', 'is_in_shopping_cart')
 
-    # def get_filterset_config(self):
-    #     """Для доступа к запросу."""
-    #     config = super().get_filterset_config()
-    #     config['request'] = self.request
-    #     return config
-
     def filter_is_favorited(self, queryset, name, value):
         """Фильтрация по флагу избранное."""
         user = self.request.user
